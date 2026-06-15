@@ -119,11 +119,24 @@ class YouTubeJobStore:
 
 def create_app(config: Config, service: TikTokToTelegram) -> Flask:
     app = Flask(__name__)
+    app.config["MAX_CONTENT_LENGTH"] = 6 * 1024 * 1024
     jobs = JobStore()
     youtube_jobs = YouTubeJobStore()
-    telegram_channels = config.telegram_channels or (
+    fallback_telegram_channels = config.telegram_channels or (
         TelegramChannel(config.telegram_chat_id, config.telegram_chat_id),
     )
+
+    def telegram_channels() -> tuple[TelegramChannel, ...]:
+        if hasattr(service, "telegram_channels"):
+            return service.telegram_channels()
+        return fallback_telegram_channels
+
+    def validate_chat_id(chat_id: str | None) -> str:
+        channels = telegram_channels()
+        selected = (chat_id or channels[0].chat_id).strip()
+        if selected not in {channel.chat_id for channel in channels}:
+            raise ValueError("Выбран неизвестный Telegram-канал")
+        return selected
 
     @app.before_request
     def require_auth() -> Response | None:
@@ -145,7 +158,42 @@ def create_app(config: Config, service: TikTokToTelegram) -> Flask:
 
     @app.get("/")
     def index() -> str:
-        return render_template("index.html", telegram_channels=telegram_channels)
+        return render_template("index.html", telegram_channels=telegram_channels())
+
+    @app.post("/settings/telegram")
+    def add_telegram_channel():
+        try:
+            service.add_telegram_destination(
+                request.form.get("name", ""),
+                request.form.get("chat_id", ""),
+                request.form.get("bot_token", ""),
+            )
+            return redirect(url_for("index", settings="telegram-added"))
+        except Exception as error:
+            LOGGER.warning("Failed to add Telegram destination: %s", type(error).__name__)
+            return render_template(
+                "index.html",
+                telegram_channels=telegram_channels(),
+                settings_error=str(error),
+                settings_open=True,
+            ), 400
+
+    @app.post("/settings/cookies/<service_name>")
+    def update_cookies(service_name: str):
+        try:
+            uploaded = request.files.get("cookies_file")
+            if not uploaded or not uploaded.filename:
+                raise ValueError("Выберите cookies.txt")
+            service.update_cookies(service_name, uploaded.read())
+            return redirect(url_for("index", settings=f"{service_name}-cookies-updated"))
+        except Exception as error:
+            LOGGER.exception("Failed to update %s cookies", service_name)
+            return render_template(
+                "index.html",
+                telegram_channels=telegram_channels(),
+                settings_error=str(error),
+                settings_open=True,
+            ), 400
 
     @app.post("/prepare")
     @app.post("/tiktok/prepare")
@@ -153,12 +201,12 @@ def create_app(config: Config, service: TikTokToTelegram) -> Flask:
         tiktok_url = request.form.get("tiktok_url", "").strip()
         selected_chat_id = request.form.get("chat_id", "")
         try:
-            selected_chat_id = config.validate_telegram_chat_id(selected_chat_id)
+            selected_chat_id = validate_chat_id(selected_chat_id)
             if is_tiktok_video_url(tiktok_url):
                 video, path = service.prepare_url(tiktok_url)
                 job = jobs.add(video, path, selected_chat_id)
                 return render_template(
-                    "edit.html", job=job, telegram_channels=telegram_channels
+                    "edit.html", job=job, telegram_channels=telegram_channels()
                 )
             post_existing = request.form.get("post_existing") == "on"
             found, published = service.import_channel(
@@ -177,7 +225,7 @@ def create_app(config: Config, service: TikTokToTelegram) -> Flask:
                 "index.html",
                 error=str(error),
                 tiktok_url=tiktok_url,
-                telegram_channels=telegram_channels,
+                telegram_channels=telegram_channels(),
                 selected_chat_id=selected_chat_id,
             ), 400
 
@@ -237,7 +285,7 @@ def create_app(config: Config, service: TikTokToTelegram) -> Flask:
     def youtube_post(job_id: str):
         job = youtube_jobs.get(job_id)
         return render_template(
-            "youtube_edit.html", job=job, telegram_channels=telegram_channels
+            "youtube_edit.html", job=job, telegram_channels=telegram_channels()
         )
 
     @app.post("/youtube/send/<job_id>")
@@ -257,7 +305,7 @@ def create_app(config: Config, service: TikTokToTelegram) -> Flask:
             return render_template(
                 "youtube_edit.html",
                 job=job,
-                telegram_channels=telegram_channels,
+                telegram_channels=telegram_channels(),
                 selected_chat_id=selected_chat_id,
                 before_text=before_text,
                 after_text=after_text,
@@ -297,7 +345,7 @@ def create_app(config: Config, service: TikTokToTelegram) -> Flask:
                 quote_text=quote_text,
                 after_text=after_text,
                 selected_chat_id=selected_chat_id,
-                telegram_channels=telegram_channels,
+                telegram_channels=telegram_channels(),
                 error=str(error),
             ), 502
 

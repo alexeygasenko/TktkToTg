@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 import requests
 import yt_dlp
 
-from app.config import Config
+from app.config import Config, TelegramChannel
 from app.storage import Storage
 
 LOGGER = logging.getLogger(__name__)
@@ -213,6 +213,17 @@ class TikTokToTelegram:
             for stale_file in self.download_dir.glob(pattern):
                 stale_file.unlink()
         self.storage = Storage(self.config.data_dir / "state.sqlite3")
+        configured_destinations = self.config.telegram_channels or (
+            TelegramChannel(self.config.telegram_chat_id, self.config.telegram_chat_id),
+        )
+        for channel in configured_destinations:
+            self.storage.add_telegram_destination(
+                channel.name,
+                channel.chat_id,
+                self.config.telegram_bot_token,
+                is_default=channel.chat_id == self.config.telegram_chat_id,
+                replace=False,
+            )
         self.ydl_lock = threading.Lock()
         self.tiktok_cookies_file = self._writable_cookie_copy(
             self.config.cookies_file, "tiktok-cookies.txt"
@@ -222,12 +233,67 @@ class TikTokToTelegram:
         )
 
     def _writable_cookie_copy(self, source: Path | None, filename: str) -> Path | None:
+        destination = self.config.data_dir / filename
+        if destination.is_file():
+            return destination
         if not source:
             return None
         if not source.is_file():
             raise FileNotFoundError(f"Cookies file not found: {source}")
-        destination = self.config.data_dir / filename
         shutil.copyfile(source, destination)
+        return destination
+
+    def telegram_channels(self) -> tuple[TelegramChannel, ...]:
+        return tuple(
+            TelegramChannel(destination.name, destination.chat_id)
+            for destination in self.storage.telegram_destinations()
+        )
+
+    def add_telegram_destination(
+        self, name: str, chat_id: str, bot_token: str
+    ) -> None:
+        name = name.strip()
+        chat_id = chat_id.strip()
+        bot_token = bot_token.strip()
+        if not name or not chat_id or not bot_token:
+            raise ValueError("Укажите название, @тег канала и токен бота")
+        if not chat_id.startswith("@"):
+            raise ValueError("Тег Telegram-канала должен начинаться с @")
+        try:
+            response = requests.get(
+                f"https://api.telegram.org/bot{bot_token}/getChat",
+                params={"chat_id": chat_id},
+                timeout=30,
+            )
+        except requests.RequestException:
+            raise ValueError("Не удалось проверить бота через Telegram API") from None
+        try:
+            payload = response.json()
+        except requests.JSONDecodeError as error:
+            raise ValueError("Telegram не ответил корректно на проверку бота") from error
+        if not payload.get("ok"):
+            raise ValueError(
+                "Telegram не подтвердил доступ. Проверьте токен, @тег и права бота."
+            )
+        self.storage.add_telegram_destination(name, chat_id, bot_token)
+
+    def update_cookies(self, service_name: str, content: bytes) -> Path:
+        if len(content) > 5 * 1024 * 1024:
+            raise ValueError("Файл cookies не должен превышать 5 МБ")
+        if b"Netscape HTTP Cookie File" not in content[:256]:
+            raise ValueError("Нужен cookies.txt в Netscape-формате")
+        if service_name == "tiktok":
+            destination = self.config.data_dir / "tiktok-cookies.txt"
+            attribute = "tiktok_cookies_file"
+        elif service_name == "youtube":
+            destination = self.config.data_dir / "youtube-cookies.txt"
+            attribute = "youtube_cookies_file"
+        else:
+            raise ValueError("Неизвестный сервис cookies")
+        temporary = destination.with_suffix(".tmp")
+        temporary.write_bytes(content)
+        temporary.replace(destination)
+        setattr(self, attribute, destination)
         return destination
 
     def _ydl_options(self, cookies_file: Path | None = None) -> dict[str, Any]:
@@ -444,7 +510,7 @@ class TikTokToTelegram:
         self, channel: str, post_existing: bool, chat_id: str | None = None
     ) -> tuple[int, int]:
         username, _ = normalize_channel(channel)
-        destination = self.config.validate_telegram_chat_id(chat_id)
+        destination = self.storage.telegram_destination(chat_id).chat_id
         videos = self.scan(channel)
         if not post_existing:
             for video in videos:
@@ -477,13 +543,13 @@ class TikTokToTelegram:
         after_text: str = "",
         chat_id: str | None = None,
     ) -> None:
-        destination = self.config.validate_telegram_chat_id(chat_id)
-        url = f"https://api.telegram.org/bot{self.config.telegram_bot_token}/sendVideo"
+        target = self.storage.telegram_destination(chat_id)
+        url = f"https://api.telegram.org/bot{target.bot_token}/sendVideo"
         with path.open("rb") as video_file:
             response = requests.post(
                 url,
                 data={
-                    "chat_id": destination,
+                    "chat_id": target.chat_id,
                     "caption": build_caption(video, quote_text, before_text, after_text),
                     "parse_mode": "HTML",
                     "supports_streaming": "true",
@@ -503,12 +569,12 @@ class TikTokToTelegram:
         after_text: str = "",
         chat_id: str | None = None,
     ) -> None:
-        destination = self.config.validate_telegram_chat_id(chat_id)
-        url = f"https://api.telegram.org/bot{self.config.telegram_bot_token}/sendPhoto"
+        target = self.storage.telegram_destination(chat_id)
+        url = f"https://api.telegram.org/bot{target.bot_token}/sendPhoto"
         response = requests.post(
             url,
             data={
-                "chat_id": destination,
+                "chat_id": target.chat_id,
                 "photo": video.thumbnail_url,
                 "caption": build_youtube_caption(video, before_text, after_text),
                 "parse_mode": "HTML",

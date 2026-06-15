@@ -1,3 +1,4 @@
+from io import BytesIO
 from pathlib import Path
 
 from app.config import Config, TelegramChannel
@@ -42,6 +43,12 @@ class FakeService:
         self, video: YouTubeVideo, before_text: str, after_text: str, chat_id: str
     ) -> None:
         self.published_youtube = (video, before_text, after_text, chat_id)
+
+    def add_telegram_destination(self, name: str, chat_id: str, bot_token: str) -> None:
+        self.added_destination = (name, chat_id, bot_token)
+
+    def update_cookies(self, service_name: str, content: bytes) -> None:
+        self.updated_cookies = (service_name, content)
 
 
 def make_config(tmp_path: Path) -> Config:
@@ -160,7 +167,7 @@ def test_home_has_post_builder_transition(tmp_path: Path) -> None:
     response = client.get("/")
 
     assert response.status_code == 200
-    assert "Подготовить пост для Telegram" in response.text
+    assert response.text.count("Подготовить пост") >= 2
     assert 'id="page-transition"' in response.text
     assert 'name="tiktok_url"' in response.text
     assert 'autocomplete="off"' in response.text
@@ -168,6 +175,31 @@ def test_home_has_post_builder_transition(tmp_path: Path) -> None:
     assert "@second" in response.text
     assert "Вставьте ссылку на TikTok-канал или видео" in response.text
     assert 'data-channel-picker' in response.text
+    assert "Добавить Telegram-канал" in response.text
+    assert "Обновить cookies" in response.text
+
+
+def test_settings_can_add_telegram_channel_and_update_cookies(tmp_path: Path) -> None:
+    service = FakeService(tmp_path / "video.mp4")
+    client = create_app(make_config(tmp_path), service).test_client()
+
+    response = client.post(
+        "/settings/telegram",
+        data={"name": "News", "chat_id": "@news", "bot_token": "123:secret"},
+    )
+    assert response.status_code == 302
+    assert service.added_destination == ("News", "@news", "123:secret")
+
+    response = client.post(
+        "/settings/cookies/youtube",
+        data={"cookies_file": (BytesIO(b"# Netscape HTTP Cookie File\n"), "cookies.txt")},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 302
+    assert service.updated_cookies == (
+        "youtube",
+        b"# Netscape HTTP Cookie File\n",
+    )
 
 
 def test_youtube_post_can_be_prepared_and_sent(tmp_path: Path) -> None:

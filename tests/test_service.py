@@ -194,6 +194,7 @@ def test_publish_youtube_sends_photo_to_selected_channel(tmp_path, monkeypatch) 
 
     monkeypatch.setattr("app.service.requests.post", fake_post)
     service = TikTokToTelegram(config)
+    service.storage.add_telegram_destination("Second", "@second", "second-token")
     video = YouTubeVideo(
         "yt1",
         "Title",
@@ -206,6 +207,33 @@ def test_publish_youtube_sends_photo_to_selected_channel(tmp_path, monkeypatch) 
     service.publish_youtube(video, "Before", "After", "@second")
 
     assert captured["url"].endswith("/sendPhoto")
+    assert "botsecond-token" in captured["url"]
     assert captured["data"]["chat_id"] == "@second"
     assert captured["data"]["photo"] == video.thumbnail_url
     assert video.url in captured["data"]["caption"]
+
+
+def test_service_updates_uploaded_cookies_without_restart(tmp_path) -> None:
+    config = Config(
+        telegram_bot_token="token",
+        telegram_chat_id="@main",
+        tiktok_channels=(),
+        poll_interval_seconds=300,
+        scan_limit=15,
+        post_existing=False,
+        data_dir=tmp_path,
+        cookies_file=None,
+        youtube_cookies_file=None,
+        youtube_po_token_provider_url=None,
+        web_host="127.0.0.1",
+        web_port=8080,
+        web_username=None,
+        web_password=None,
+    )
+    service = TikTokToTelegram(config)
+
+    path = service.update_cookies("youtube", b"# Netscape HTTP Cookie File\n")
+
+    assert path == tmp_path / "youtube-cookies.txt"
+    assert service.youtube_cookies_file == path
+    assert path.read_bytes() == b"# Netscape HTTP Cookie File\n"
