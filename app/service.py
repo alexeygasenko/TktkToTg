@@ -279,6 +279,52 @@ class TikTokToTelegram:
             )
         self.storage.add_telegram_destination(name, chat_id, bot_token)
 
+    def discover_telegram_destinations(
+        self, bot_token: str
+    ) -> tuple[TelegramChannel, ...]:
+        bot_token = bot_token.strip()
+        if not bot_token:
+            raise ValueError("Укажите токен бота")
+        try:
+            response = requests.get(
+                f"https://api.telegram.org/bot{bot_token}/getUpdates",
+                params={
+                    "limit": 100,
+                    "timeout": 0,
+                    "allowed_updates": '["channel_post","edited_channel_post","my_chat_member"]',
+                },
+                timeout=30,
+            )
+            payload = response.json()
+        except (requests.RequestException, requests.JSONDecodeError):
+            raise ValueError("Не удалось получить каналы через Telegram API") from None
+        if not payload.get("ok"):
+            raise ValueError(
+                "Telegram не разрешил поиск каналов. Проверьте токен и отсутствие webhook."
+            )
+        found: dict[str, TelegramChannel] = {}
+        for update in payload.get("result") or []:
+            chat = (
+                (update.get("channel_post") or {}).get("chat")
+                or (update.get("edited_channel_post") or {}).get("chat")
+                or (update.get("my_chat_member") or {}).get("chat")
+                or {}
+            )
+            if chat.get("type") != "channel" or not chat.get("id"):
+                continue
+            chat_id = str(chat["id"])
+            name = str(chat.get("title") or chat.get("username") or chat_id)
+            found[chat_id] = TelegramChannel(name, chat_id)
+        if not found:
+            raise ValueError(
+                "Каналы не найдены. Добавьте бота администратором и опубликуйте новый пост."
+            )
+        for channel in found.values():
+            self.storage.add_telegram_destination(
+                channel.name, channel.chat_id, bot_token
+            )
+        return tuple(found.values())
+
     def update_cookies(self, service_name: str, content: bytes) -> Path:
         if len(content) > 5 * 1024 * 1024:
             raise ValueError("Файл cookies не должен превышать 5 МБ")

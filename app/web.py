@@ -178,6 +178,26 @@ def create_app(config: Config, service: TikTokToTelegram) -> Flask:
                 settings_open=True,
             ), 400
 
+    @app.post("/settings/telegram/discover")
+    def discover_telegram_channels():
+        try:
+            found = service.discover_telegram_destinations(
+                request.form.get("bot_token", "")
+            )
+            return redirect(
+                url_for("index", settings="telegram-discovered", found=len(found))
+            )
+        except Exception as error:
+            LOGGER.warning(
+                "Failed to discover Telegram destinations: %s", type(error).__name__
+            )
+            return render_template(
+                "index.html",
+                telegram_channels=telegram_channels(),
+                settings_error=str(error),
+                settings_open=True,
+            ), 400
+
     @app.post("/settings/cookies/<service_name>")
     def update_cookies(service_name: str):
         try:

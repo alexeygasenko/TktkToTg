@@ -47,6 +47,10 @@ class FakeService:
     def add_telegram_destination(self, name: str, chat_id: str, bot_token: str) -> None:
         self.added_destination = (name, chat_id, bot_token)
 
+    def discover_telegram_destinations(self, bot_token: str):
+        self.discovered_token = bot_token
+        return (TelegramChannel("Private", "-1001234567890"),)
+
     def update_cookies(self, service_name: str, content: bytes) -> None:
         self.updated_cookies = (service_name, content)
 
@@ -178,6 +182,7 @@ def test_home_has_post_builder_transition(tmp_path: Path) -> None:
     assert "Добавить Telegram-канал" in response.text
     assert "Обновить cookies" in response.text
     assert "@channel или -1001234567890" in response.text
+    assert "Найти и добавить каналы бота" in response.text
 
 
 def test_settings_can_add_telegram_channel_and_update_cookies(tmp_path: Path) -> None:
@@ -190,6 +195,12 @@ def test_settings_can_add_telegram_channel_and_update_cookies(tmp_path: Path) ->
     )
     assert response.status_code == 302
     assert service.added_destination == ("News", "@news", "123:secret")
+
+    response = client.post(
+        "/settings/telegram/discover", data={"bot_token": "123:secret"}
+    )
+    assert response.status_code == 302
+    assert service.discovered_token == "123:secret"
 
     response = client.post(
         "/settings/cookies/youtube",

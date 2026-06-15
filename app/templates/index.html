@@ -74,7 +74,13 @@
   <div class="settings-grid">
     <form action="{{ url_for('add_telegram_channel') }}" method="post" autocomplete="off">
       <h3>Добавить Telegram-канал</h3>
-      <p class="hint">Сначала добавьте бота администратором канала. Для приватного канала используйте числовой ID вида -100...</p>
+      <p class="hint">Проще всего добавить бота администратором, опубликовать новый пост и найти канал по токену.</p>
+      <div class="discover-box">
+        <label for="discover_bot_token">Токен бота для поиска каналов</label>
+        <input id="discover_bot_token" form="discover-telegram-form" name="bot_token" type="password" autocomplete="new-password" placeholder="123456789:bot_token" required>
+        <button class="secondary" form="discover-telegram-form" type="submit">Найти и добавить каналы бота</button>
+      </div>
+      <p class="settings-divider">или добавить вручную</p>
       <label for="telegram_name">Название</label>
       <input id="telegram_name" name="name" autocomplete="off" placeholder="Основной канал" required>
       <label for="telegram_chat_id">Тег или ID канала</label>
@@ -83,6 +89,7 @@
       <input id="telegram_bot_token" name="bot_token" type="password" autocomplete="new-password" placeholder="123456789:bot_token" required>
       <button type="submit">Добавить канал</button>
     </form>
+    <form id="discover-telegram-form" action="{{ url_for('discover_telegram_channels') }}" method="post" autocomplete="off"></form>
     <div class="cookie-settings">
       <h3>Обновить cookies</h3>
       <p class="hint">Загрузите cookies.txt в Netscape-формате. Новые cookies применятся сразу.</p>

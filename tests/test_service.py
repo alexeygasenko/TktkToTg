@@ -274,3 +274,49 @@ def test_service_accepts_private_telegram_channel_id(tmp_path, monkeypatch) -> N
 
     assert captured["params"]["chat_id"] == "-1001234567890"
     assert service.storage.telegram_destination("-1001234567890").name == "Private"
+
+
+def test_service_discovers_private_channel_from_bot_updates(tmp_path, monkeypatch) -> None:
+    config = Config(
+        telegram_bot_token="token",
+        telegram_chat_id="@main",
+        tiktok_channels=(),
+        poll_interval_seconds=300,
+        scan_limit=15,
+        post_existing=False,
+        data_dir=tmp_path,
+        cookies_file=None,
+        youtube_cookies_file=None,
+        youtube_po_token_provider_url=None,
+        web_host="127.0.0.1",
+        web_port=8080,
+        web_username=None,
+        web_password=None,
+    )
+
+    class Response:
+        def json(self):
+            return {
+                "ok": True,
+                "result": [
+                    {
+                        "channel_post": {
+                            "chat": {
+                                "id": -1001234567890,
+                                "title": "Private channel",
+                                "type": "channel",
+                            }
+                        }
+                    }
+                ],
+            }
+
+    monkeypatch.setattr("app.service.requests.get", lambda *args, **kwargs: Response())
+    service = TikTokToTelegram(config)
+
+    found = service.discover_telegram_destinations("private-token")
+
+    assert found == (TelegramChannel("Private channel", "-1001234567890"),)
+    destination = service.storage.telegram_destination("-1001234567890")
+    assert destination.name == "Private channel"
+    assert destination.bot_token == "private-token"
