@@ -77,9 +77,35 @@ header { max-width: 760px; margin-bottom: 22px; }
   text-transform: uppercase;
   backdrop-filter: blur(18px) saturate(150%);
 }
+.brand-title {
+  margin-top: 12px;
+  font-family: "Trebuchet MS", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(58px, 8vw, 104px);
+  font-weight: 900;
+  line-height: .86;
+  letter-spacing: -.085em;
+  background:
+    linear-gradient(110deg, #ffffff 6%, #b7c2ff 38%, #62ecff 64%, #ff82ce 92%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow:
+    0 18px 60px rgba(92, 210, 255, .28),
+    0 2px 0 rgba(255, 255, 255, .18);
+}
+.brand-title::after {
+  content: "";
+  display: block;
+  width: min(280px, 62%);
+  height: 2px;
+  margin-top: 16px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, .8), rgba(98, 236, 255, .55), transparent);
+  box-shadow: 0 0 18px rgba(98, 236, 255, .35);
+}
 h1 {
   display: inline-block;
-  margin: 10px 0 6px;
+  margin: 18px 0 6px;
   padding-bottom: .1em;
   font-size: clamp(38px, 5vw, 58px);
   line-height: 1.06;
