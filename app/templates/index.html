@@ -76,7 +76,7 @@
 <button class="settings-toggle" type="button" data-settings-open aria-label="Открыть настройки"><span></span><span></span><span></span></button>
 <div class="settings-overlay" data-settings-close></div>
 <aside class="settings-drawer {% if settings_open or request.args.get('settings') %}open{% endif %}" aria-label="Настройки">
-  <div class="settings-drawer-heading"><div><span class="eyebrow">Настройки</span></div></div>
+  <div class="settings-drawer-heading"><div class="settings-title">Настройки</div></div>
   {% if settings_error %}<div class="error settings-error">{{ settings_error }}</div>{% endif %}
   {% if request.args.get("settings") %}<div class="settings-success">Настройки обновлены.</div>{% endif %}
   <div class="settings-grid">
