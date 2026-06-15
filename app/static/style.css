@@ -1,16 +1,16 @@
 :root {
   color-scheme: dark;
   --bg: #080a14;
-  --glass: rgba(255, 255, 255, .09);
-  --glass-strong: rgba(255, 255, 255, .14);
-  --line: rgba(255, 255, 255, .18);
-  --line-soft: rgba(255, 255, 255, .1);
+  --glass: rgba(255, 255, 255, .045);
+  --glass-strong: rgba(255, 255, 255, .085);
+  --line: rgba(255, 255, 255, .22);
+  --line-soft: rgba(255, 255, 255, .13);
   --text: #f8faff;
   --muted: rgba(226, 232, 255, .68);
   --accent: #8b7cff;
   --accent-two: #4edcff;
   --accent-hover: #a59aff;
-  --shadow: 0 28px 80px rgba(0, 0, 0, .34);
+  --shadow: 0 24px 70px rgba(0, 0, 0, .25);
 }
 
 * { box-sizing: border-box; }
@@ -91,9 +91,12 @@ h1 {
 
 .card, .caption-preview, .youtube-result, .check-row, video {
   border: 1px solid var(--line);
-  box-shadow: inset 0 1px rgba(255, 255, 255, .16), var(--shadow);
-  backdrop-filter: blur(28px) saturate(155%);
-  -webkit-backdrop-filter: blur(28px) saturate(155%);
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, .22),
+    inset 0 -1px rgba(255, 255, 255, .035),
+    var(--shadow);
+  backdrop-filter: blur(34px) saturate(175%);
+  -webkit-backdrop-filter: blur(34px) saturate(175%);
 }
 
 .card {
@@ -102,30 +105,31 @@ h1 {
   padding: 26px;
   border-radius: 26px;
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .045) 50%),
+    radial-gradient(circle at 5% 0%, rgba(255, 255, 255, .16), transparent 38%),
+    linear-gradient(145deg, rgba(255, 255, 255, .075), rgba(255, 255, 255, .018) 55%),
     var(--glass);
 }
 .card::before {
   content: "";
   position: absolute;
   inset: 0 0 auto;
-  height: 45%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, .09), transparent);
+  height: 38%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .08), transparent);
   pointer-events: none;
 }
 .card > * { position: relative; }
 
-label { display: block; margin-bottom: 8px; color: #f2f5ff; font-weight: 700; }
+label { display: block; margin-bottom: 8px; color: #f2f5ff; font-weight: 600; }
 input, textarea {
   width: 100%;
   border: 1px solid var(--line-soft);
   border-radius: 15px;
-  background: rgba(5, 8, 20, .34);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .08);
+  background: linear-gradient(145deg, rgba(255, 255, 255, .055), rgba(5, 8, 20, .18));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .11), 0 8px 24px rgba(0, 0, 0, .08);
   color: var(--text);
   font: inherit;
   outline: none;
-  backdrop-filter: blur(15px);
+  backdrop-filter: blur(22px) saturate(150%);
   transition: border-color .2s, box-shadow .2s, background .2s;
 }
 input { padding: 15px 16px; margin-bottom: 16px; }
@@ -133,8 +137,8 @@ textarea { min-height: 230px; padding: 14px; resize: vertical; }
 input::placeholder, textarea::placeholder { color: rgba(220, 228, 255, .38); }
 input:focus, textarea:focus {
   border-color: rgba(113, 217, 255, .72);
-  background: rgba(10, 14, 32, .5);
-  box-shadow: 0 0 0 4px rgba(78, 220, 255, .11), inset 0 1px rgba(255, 255, 255, .1);
+  background: linear-gradient(145deg, rgba(255, 255, 255, .085), rgba(8, 12, 30, .22));
+  box-shadow: 0 0 0 4px rgba(78, 220, 255, .09), inset 0 1px rgba(255, 255, 255, .16);
 }
 
 button, .button, .secondary {
@@ -143,20 +147,46 @@ button, .button, .secondary {
   align-items: center;
   min-height: 48px;
   padding: 13px 19px;
-  border: 1px solid rgba(255, 255, 255, .18);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .26);
   border-radius: 15px;
-  box-shadow: inset 0 1px rgba(255, 255, 255, .3), 0 10px 25px rgba(0, 0, 0, .22);
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, .34),
+    inset 0 -1px rgba(255, 255, 255, .06),
+    0 10px 28px rgba(0, 0, 0, .15);
   color: white;
   font: inherit;
-  font-weight: 800;
+  font-weight: 600;
+  letter-spacing: .005em;
   text-decoration: none;
   cursor: pointer;
-  transition: transform .18s, box-shadow .18s, background .18s;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  transition: transform .18s, box-shadow .18s, background .18s, border-color .18s;
 }
-button, .button { background: linear-gradient(135deg, rgba(123, 107, 255, .94), rgba(58, 196, 255, .86)); }
-button:hover, .button:hover { transform: translateY(-2px); box-shadow: inset 0 1px rgba(255, 255, 255, .36), 0 15px 34px rgba(65, 160, 255, .27); }
-.secondary { background: rgba(255, 255, 255, .09); color: var(--text); }
-.secondary:hover { background: rgba(255, 255, 255, .15); transform: translateY(-2px); }
+button::before, .button::before, .secondary::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 48%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .2), transparent);
+  pointer-events: none;
+}
+button, .button {
+  background:
+    linear-gradient(135deg, rgba(128, 112, 255, .48), rgba(63, 201, 255, .34)),
+    rgba(255, 255, 255, .055);
+}
+button:hover, .button:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, .38);
+  background:
+    linear-gradient(135deg, rgba(139, 124, 255, .58), rgba(74, 211, 255, .43)),
+    rgba(255, 255, 255, .07);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .42), 0 15px 35px rgba(65, 160, 255, .2);
+}
+.secondary { background: rgba(255, 255, 255, .055); color: var(--text); }
+.secondary:hover { background: rgba(255, 255, 255, .11); border-color: rgba(255, 255, 255, .34); transform: translateY(-2px); }
 .hint { margin: 14px 0 0; font-size: 13px; }
 .error { margin-bottom: 20px; padding: 14px 16px; border: 1px solid rgba(255, 104, 140, .38); border-radius: 16px; background: rgba(116, 25, 55, .42); backdrop-filter: blur(20px); }
 
@@ -170,7 +200,7 @@ video { width: 100%; max-height: 650px; border-radius: 26px; background: rgba(0,
 .caption-builder label:not(:first-child) { margin-top: 10px; }
 .caption-builder textarea { min-height: 80px; }
 .caption-builder textarea[name="quote_text"] { min-height: 150px; }
-.caption-preview { margin-top: 20px; padding: 17px; border-radius: 17px; background: rgba(4, 8, 22, .3); }
+.caption-preview { margin-top: 20px; padding: 17px; border-radius: 17px; background: linear-gradient(145deg, rgba(255, 255, 255, .055), rgba(4, 8, 22, .15)); }
 .caption-preview > strong { display: block; margin-bottom: 12px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .1em; }
 #caption-preview-content { display: grid; gap: 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
 #caption-preview-content p, #caption-preview-content blockquote { margin: 0; }
@@ -190,23 +220,23 @@ video { width: 100%; max-height: 650px; border-radius: 26px; background: rgba(0,
   height: 50px;
   border: 1px solid rgba(255, 255, 255, .24);
   border-radius: 17px;
-  box-shadow: inset 0 1px rgba(255, 255, 255, .32), 0 10px 28px rgba(0, 0, 0, .24);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .4), 0 10px 28px rgba(0, 0, 0, .16);
   font-size: 14px;
   font-weight: 900;
 }
-.tiktok-mark { background: linear-gradient(135deg, rgba(37, 244, 238, .9), rgba(254, 44, 85, .82)); color: #09090b; }
-.youtube-mark { background: linear-gradient(135deg, rgba(255, 0, 51, .92), rgba(255, 92, 130, .72)); color: white; }
+.tiktok-mark { background: linear-gradient(135deg, rgba(37, 244, 238, .62), rgba(254, 44, 85, .48)); color: #f7ffff; }
+.youtube-mark { background: linear-gradient(135deg, rgba(255, 0, 51, .6), rgba(255, 92, 130, .38)); color: white; }
 .check-row {
   display: flex;
   gap: 12px;
   margin: 2px 0 20px;
   padding: 14px;
   border-radius: 15px;
-  background: rgba(255, 255, 255, .055);
-  box-shadow: inset 0 1px rgba(255, 255, 255, .1);
+  background: linear-gradient(145deg, rgba(255, 255, 255, .065), rgba(255, 255, 255, .02));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .14);
   cursor: pointer;
 }
-.check-row:hover { background: rgba(255, 255, 255, .085); }
+.check-row:hover { background: linear-gradient(145deg, rgba(255, 255, 255, .1), rgba(255, 255, 255, .035)); }
 .check-row input {
   width: 18px;
   height: 18px;
@@ -218,7 +248,7 @@ video { width: 100%; max-height: 650px; border-radius: 26px; background: rgba(0,
 }
 .check-row span { display: grid; gap: 3px; }
 .check-row small { color: var(--muted); font-weight: 400; line-height: 1.35; }
-.youtube-result { margin-top: 18px; overflow: hidden; border-radius: 19px; background: rgba(5, 8, 20, .38); }
+.youtube-result { margin-top: 18px; overflow: hidden; border-radius: 19px; background: linear-gradient(145deg, rgba(255, 255, 255, .055), rgba(5, 8, 20, .16)); }
 .youtube-result img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
 .youtube-meta { padding: 18px; }
 .youtube-meta h3 { font-size: 18px; }
