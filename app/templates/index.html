@@ -9,18 +9,19 @@
         <p>Ролик или канал</p>
       </div>
     </div>
-    <form id="tiktok-form" action="{{ url_for('prepare') }}" method="post">
+    <form id="tiktok-form" action="{{ url_for('prepare') }}" method="post" autocomplete="off">
       <label for="tiktok_url">Ссылка на TikTok</label>
       <input
         id="tiktok_url"
         name="tiktok_url"
         type="url"
+        autocomplete="off"
         placeholder="https://www.tiktok.com/@author или .../video/..."
         value="{{ tiktok_url or '' }}"
         required
       >
       <label class="check-row">
-        <input type="checkbox" name="post_existing">
+        <input type="checkbox" name="post_existing" autocomplete="off">
         <span>
           <strong>Публиковать существующие видео канала</strong>
           <small>Для ссылки на канал. Если выключено, найденные сейчас ролики будут пропущены, а новые продолжат отслеживаться.</small>

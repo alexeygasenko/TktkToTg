@@ -7,7 +7,7 @@
 {% block content %}
 <section class="editor">
   <video controls preload="metadata" src="{{ url_for('preview', job_id=job.job_id) }}"></video>
-  <form class="card" action="{{ url_for('send', job_id=job.job_id) }}" method="post">
+  <form class="card" action="{{ url_for('send', job_id=job.job_id) }}" method="post" autocomplete="off">
     <div class="author">
       Автор:
       <a href="https://www.tiktok.com/@{{ job.video.username }}" target="_blank" rel="noreferrer">
@@ -16,13 +16,13 @@
     </div>
     <div class="caption-builder">
       <label for="before_text">Текст до цитаты</label>
-      <textarea id="before_text" name="before_text" rows="3" maxlength="3000" placeholder="Необязательный обычный текст">{{ before_text if before_text is defined else "" }}</textarea>
+      <textarea id="before_text" name="before_text" rows="3" maxlength="3000" autocomplete="off" placeholder="Необязательный обычный текст">{{ before_text if before_text is defined else "" }}</textarea>
 
       <label for="quote_text">Текст цитаты</label>
-      <textarea id="quote_text" name="quote_text" rows="7" maxlength="3000">{{ quote_text if quote_text is defined else job.video.description }}</textarea>
+      <textarea id="quote_text" name="quote_text" rows="7" maxlength="3000" autocomplete="off">{{ quote_text if quote_text is defined else job.video.description }}</textarea>
 
       <label for="after_text">Текст после цитаты</label>
-      <textarea id="after_text" name="after_text" rows="3" maxlength="3000" placeholder="Необязательный обычный текст">{{ after_text if after_text is defined else "" }}</textarea>
+      <textarea id="after_text" name="after_text" rows="3" maxlength="3000" autocomplete="off" placeholder="Необязательный обычный текст">{{ after_text if after_text is defined else "" }}</textarea>
     </div>
     <div class="caption-preview">
       <strong>Предпросмотр подписи</strong>

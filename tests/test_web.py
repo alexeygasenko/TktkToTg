@@ -137,3 +137,5 @@ def test_home_has_post_builder_transition(tmp_path: Path) -> None:
     assert response.status_code == 200
     assert "Подготовить пост для Telegram" in response.text
     assert 'id="page-transition"' in response.text
+    assert 'name="tiktok_url"' in response.text
+    assert 'autocomplete="off"' in response.text
