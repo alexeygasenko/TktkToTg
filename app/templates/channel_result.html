@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}TikTok-канал обработан{% endblock %}
+{% block heading %}Канал обработан{% endblock %}
+{% block lead %}
+{% if post_existing %}
+Найденные существующие видео отправлены в Telegram.
+{% else %}
+Найденные сейчас видео пропущены. Новые ролики будут отслеживаться.
+{% endif %}
+{% endblock %}
+{% block content %}
+<div class="card result-grid">
+  <div><strong>{{ found }}</strong><span>найдено</span></div>
+  <div><strong>{{ published }}</strong><span>опубликовано</span></div>
+  <a class="button" href="{{ url_for('index') }}">Вернуться</a>
+</div>
+{% endblock %}

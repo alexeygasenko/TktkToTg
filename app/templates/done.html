@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Опубликовано{% endblock %}
+{% block heading %}Видео опубликовано{% endblock %}
+{% block lead %}Telegram принял видео и подпись.{% endblock %}
+{% block content %}
+<div class="card done">
+  <a class="button" href="{{ url_for('index') }}">Подготовить следующее видео</a>
+</div>
+{% endblock %}

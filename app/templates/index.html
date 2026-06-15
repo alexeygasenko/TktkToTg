@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="home-grid">
+  <section class="card service-card">
+    <div class="service-heading">
+      <span class="service-mark tiktok-mark">TT</span>
+      <div>
+        <h2>TikTok → Telegram</h2>
+        <p>Ролик или канал</p>
+      </div>
+    </div>
+    <form id="tiktok-form" action="{{ url_for('prepare') }}" method="post">
+      <label for="tiktok_url">Ссылка на TikTok</label>
+      <input
+        id="tiktok_url"
+        name="tiktok_url"
+        type="url"
+        placeholder="https://www.tiktok.com/@author или .../video/..."
+        value="{{ tiktok_url or '' }}"
+        required
+      >
+      <label class="check-row">
+        <input type="checkbox" name="post_existing">
+        <span>
+          <strong>Публиковать существующие видео канала</strong>
+          <small>Для ссылки на канал. Если выключено, найденные сейчас ролики будут пропущены, а новые продолжат отслеживаться.</small>
+        </span>
+      </label>
+      <button type="submit">Подготовить пост для Telegram</button>
+      <p class="hint">Для отдельного ролика откроется конструктор подписи перед отправкой.</p>
+    </form>
+  </section>
+
+  <section class="card service-card youtube-card">
+    <div class="service-heading">
+      <span class="service-mark youtube-mark">YT</span>
+      <div>
+        <h2>YouTube Downloader</h2>
+        <p>Видео и превью в максимальном качестве</p>
+      </div>
+    </div>
+    <label for="youtube_url">Ссылка на YouTube-видео</label>
+    <input
+      id="youtube_url"
+      type="url"
+      placeholder="https://www.youtube.com/watch?v=..."
+      autocomplete="off"
+    >
+    <div id="youtube-status" class="hint">Вставьте ссылку — превью загрузится автоматически.</div>
+    <article id="youtube-result" class="youtube-result" hidden>
+      <img id="youtube-thumbnail" alt="Превью YouTube-видео">
+      <div class="youtube-meta">
+        <h3 id="youtube-title"></h3>
+        <p id="youtube-channel"></p>
+        <div class="download-actions">
+          <a id="youtube-thumbnail-download" class="secondary" href="#">Скачать превью</a>
+          <a id="youtube-video-download" class="button" href="#">Скачать видео</a>
+        </div>
+        <p class="hint">Подготовка видео в полном качестве начнётся после нажатия и может занять несколько минут.</p>
+      </div>
+    </article>
+  </section>
+</div>
+
+<div id="page-transition" class="page-transition" aria-live="polite" hidden>
+  <div class="transition-orb">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+  <strong>Подготавливаем публикацию</strong>
+  <p>Загружаем видео и открываем конструктор подписи</p>
+</div>
+
+<script>
+  const tiktokForm = document.getElementById("tiktok-form");
+  const pageTransition = document.getElementById("page-transition");
+  const youtubeInput = document.getElementById("youtube_url");
+  const youtubeStatus = document.getElementById("youtube-status");
+  const youtubeResult = document.getElementById("youtube-result");
+  let youtubeTimer;
+
+  async function inspectYouTube() {
+    const url = youtubeInput.value.trim();
+    if (!url) {
+      youtubeResult.hidden = true;
+      youtubeStatus.textContent = "Вставьте ссылку — превью загрузится автоматически.";
+      return;
+    }
+    youtubeStatus.textContent = "Получаю информацию о видео…";
+    youtubeResult.hidden = true;
+    const body = new URLSearchParams({youtube_url: url});
+    try {
+      const response = await fetch("{{ url_for('youtube_info') }}", {method: "POST", body});
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Не удалось обработать ссылку");
+      document.getElementById("youtube-thumbnail").src = data.thumbnail_url;
+      document.getElementById("youtube-title").textContent = data.title;
+      document.getElementById("youtube-channel").textContent = data.channel;
+      document.getElementById("youtube-thumbnail-download").href = data.thumbnail_download_url;
+      document.getElementById("youtube-video-download").href = data.video_download_url;
+      youtubeStatus.textContent = "";
+      youtubeResult.hidden = false;
+    } catch (error) {
+      youtubeStatus.textContent = error.message;
+    }
+  }
+
+  youtubeInput.addEventListener("input", () => {
+    clearTimeout(youtubeTimer);
+    youtubeTimer = setTimeout(inspectYouTube, 600);
+  });
+  youtubeInput.addEventListener("paste", () => {
+    clearTimeout(youtubeTimer);
+    youtubeTimer = setTimeout(inspectYouTube, 50);
+  });
+
+  tiktokForm.addEventListener("submit", () => {
+    if (!tiktokForm.checkValidity()) return;
+    pageTransition.hidden = false;
+    requestAnimationFrame(() => pageTransition.classList.add("active"));
+  });
+</script>
+{% endblock %}

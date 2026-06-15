@@ -1,0 +1,11 @@
+.env
+config.yaml
+config.yml
+.git
+.pytest_cache
+__pycache__
+*.pyc
+data
+*cookie*.txt
+*cookie*.json
+*cookies*/

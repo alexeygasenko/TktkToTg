@@ -1,0 +1,27 @@
+telegram:
+  bot_token: "123456789:replace_me"
+  chat_id: "@my_channel"
+
+tiktok:
+  # Оставьте список пустым, если нужен только ручной веб-интерфейс.
+  channels:
+    - "@first_author"
+    - "https://www.tiktok.com/@second_author"
+  poll_interval_seconds: 300
+  scan_limit: 15
+  post_existing: false
+  # Экспортированный cookies.txt в Netscape-формате, если TikTok требует авторизацию.
+  # cookies_file: tiktok-cookies.txt
+
+youtube:
+  # Экспортированный cookies.txt для YouTube, если сервис требует подтверждение входа.
+  # cookies_file: youtube-cookies.txt
+  po_token_provider_url: http://bgutil-provider:4416
+
+web:
+  host: 0.0.0.0
+  port: 8080
+  # username: admin
+  # password: replace_with_a_long_password
+
+data_dir: /data

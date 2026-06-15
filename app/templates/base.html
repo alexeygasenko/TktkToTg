@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Media Hub{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+  <div class="ambient ambient-three"></div>
+  <main class="shell">
+    <header>
+      {% block eyebrow %}<span class="eyebrow">Media Hub</span>{% endblock %}
+      <h1>{% block heading %}Видео без лишних шагов{% endblock %}</h1>
+      <p class="lead">{% block lead %}Публикуйте TikTok в Telegram и скачивайте материалы с YouTube.{% endblock %}</p>
+    </header>
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

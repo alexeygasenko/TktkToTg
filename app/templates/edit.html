@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Проверка публикации{% endblock %}
+{% block body_class %}editor-page{% endblock %}
+{% block eyebrow %}<a class="eyebrow back-link" href="{{ url_for('index') }}">← На главную</a>{% endblock %}
+{% block heading %}Проверьте публикацию{% endblock %}
+{% block lead %}Соберите подпись перед отправкой. Ссылка на автора будет добавлена автоматически.{% endblock %}
+{% block content %}
+<section class="editor">
+  <video controls preload="metadata" src="{{ url_for('preview', job_id=job.job_id) }}"></video>
+  <form class="card" action="{{ url_for('send', job_id=job.job_id) }}" method="post">
+    <div class="author">
+      Автор:
+      <a href="https://www.tiktok.com/@{{ job.video.username }}" target="_blank" rel="noreferrer">
+        @{{ job.video.username }}
+      </a>
+    </div>
+    <div class="caption-builder">
+      <label for="before_text">Текст до цитаты</label>
+      <textarea id="before_text" name="before_text" rows="3" maxlength="3000" placeholder="Необязательный обычный текст">{{ before_text if before_text is defined else "" }}</textarea>
+
+      <label for="quote_text">Текст цитаты</label>
+      <textarea id="quote_text" name="quote_text" rows="7" maxlength="3000">{{ quote_text if quote_text is defined else job.video.description }}</textarea>
+
+      <label for="after_text">Текст после цитаты</label>
+      <textarea id="after_text" name="after_text" rows="3" maxlength="3000" placeholder="Необязательный обычный текст">{{ after_text if after_text is defined else "" }}</textarea>
+    </div>
+    <div class="caption-preview">
+      <strong>Предпросмотр подписи</strong>
+      <div id="caption-preview-content">
+        <a href="https://www.tiktok.com/@{{ job.video.username }}" target="_blank" rel="noreferrer">@{{ job.video.username }}</a>
+        <p id="preview-before"></p>
+        <blockquote id="preview-quote"></blockquote>
+        <p id="preview-after"></p>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="secondary" type="submit" formaction="{{ url_for('cancel', job_id=job.job_id) }}">Отмена</button>
+      <button type="submit">Отправить в Telegram</button>
+    </div>
+    <p class="hint">При превышении лимита Telegram подпись автоматически сократится.</p>
+  </form>
+</section>
+<script>
+  const fields = {
+    before: document.getElementById("before_text"),
+    quote: document.getElementById("quote_text"),
+    after: document.getElementById("after_text"),
+  };
+  const previews = {
+    before: document.getElementById("preview-before"),
+    quote: document.getElementById("preview-quote"),
+    after: document.getElementById("preview-after"),
+  };
+  function updatePreview() {
+    for (const key of Object.keys(fields)) {
+      const value = fields[key].value.trim();
+      previews[key].textContent = value;
+      previews[key].hidden = !value;
+    }
+  }
+  Object.values(fields).forEach((field) => field.addEventListener("input", updatePreview));
+  updatePreview();
+</script>
+{% endblock %}

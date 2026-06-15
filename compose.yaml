@@ -1,0 +1,21 @@
+services:
+  tiktok-to-telegram:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      bgutil-provider:
+        condition: service_started
+    ports:
+      - "127.0.0.1:6767:8080"
+    volumes:
+      - tiktok-data:/data
+      - ./config.yaml:/config/config.yaml:ro
+      - ./tiktok-cookies.txt:/config/tiktok-cookies.txt:ro
+      - ./youtube-cookies.txt:/config/youtube-cookies.txt:ro
+
+  bgutil-provider:
+    image: brainicism/bgutil-ytdlp-pot-provider:1.3.1
+    restart: unless-stopped
+
+volumes:
+  tiktok-data:
