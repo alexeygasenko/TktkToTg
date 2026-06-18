@@ -1,78 +1,81 @@
 # ClipRelay
 
-Docker-сервис:
+Docker service for relaying social video posts to Telegram.
 
-- публикует отдельные TikTok-видео в Telegram после редактирования текста;
-- скачивает Instagram-видео и публикует их в Telegram после редактирования текста;
-- принимает TikTok-каналы и позволяет отправить или пропустить существующие ролики;
-- автоматически мониторит заданные TikTok-каналы;
-- скачивает YouTube-видео и превью в максимальном доступном качестве;
-- публикует YouTube-ссылки с превью и подготовленным текстом в Telegram.
+- Publishes individual TikTok videos to Telegram after caption editing.
+- Downloads Instagram videos and publishes them to Telegram after caption editing.
+- Accepts TikTok channels and lets you publish or skip existing videos.
+- Automatically monitors configured TikTok channels.
+- Downloads YouTube videos and thumbnails in the best available quality.
+- Publishes YouTube links with thumbnails and prepared Telegram captions.
 
-## Настройка
+## Setup
 
-Начальные параметры хранятся в локальном `config.yaml`. При первом запуске
-Telegram-токен и список каналов импортируются в `data/state.sqlite3`. После
-этого дополнительные Telegram-каналы, токены ботов и обновлённые cookies можно
-добавлять через веб-интерфейс.
+Initial settings are stored in the local `config.yaml`. On first startup, the
+Telegram token and channel list are imported into `data/state.sqlite3`. After
+that, additional Telegram channels, bot tokens, and updated cookies can be added
+from the web interface.
 
 ```bash
 cp config.example.yaml config.yaml
 ```
 
-Заполните в `config.yaml` минимум:
+Fill at least these values in `config.yaml`:
 
 ```yaml
 telegram:
   bot_token: "123456789:bot_token"
   chat_id: "@my_channel"
   channels:
-    - name: "Основной канал"
+    - name: "Main channel"
       chat_id: "@my_channel"
-    - name: "Тестовый канал"
+    - name: "Test channel"
       chat_id: "@my_test_channel"
 ```
 
-`telegram.chat_id` используется автоматическим мониторингом по умолчанию.
-`telegram.channels` задаёт первоначальный список каналов. Добавьте бота
-администратором каждого канала и запустите сервис:
+`telegram.chat_id` is used as the default destination for automatic monitoring.
+`telegram.channels` defines the initial channel list. Add the bot as an
+administrator to every channel, then start the service:
 
 ```bash
 docker compose up -d --build
 docker compose logs -f
 ```
 
-Откройте `http://127.0.0.1:6767`. Для TikTok вставьте ссылку на ролик или канал.
-Для YouTube вставьте ссылку на видео: превью появится автоматически, после чего
-будут доступны кнопки скачивания видео, превью и подготовки Telegram-поста.
+Open `http://127.0.0.1:6767`. For TikTok, paste a video or channel link. For
+Instagram, paste a video, reel, or post link. For YouTube, paste a video link:
+the thumbnail preview appears automatically, followed by buttons for downloading
+the video, downloading the thumbnail, and preparing the Telegram post.
 
-В блоке «Настройки Telegram и cookies» можно:
+In the "Telegram settings and cookies" section, you can:
 
-- добавить публичный канал по `@тегу` или приватный канал по числовому ID вида
-  `-1001234567890`, указав название и токен бота;
-- автоматически найти и добавить каналы по токену бота после назначения его
-  администратором и публикации нового поста;
-- заменить TikTok cookies;
-- заменить Instagram cookies;
-- заменить YouTube cookies.
+- add a public channel by `@handle` or a private channel by numeric ID such as
+  `-1001234567890`, with a display name and bot token;
+- automatically discover and add channels for a bot token after the bot is made
+  an administrator and a new post is published in the channel;
+- replace TikTok cookies;
+- replace Instagram cookies;
+- replace YouTube cookies.
 
-Публичные Telegram-каналы сохраняются и показываются по `@тегу`. Для приватных
-каналов сохраняется числовой ID, но в интерфейсе отображается только название.
-В настройках каналы можно искать и удалять; поиск также доступен при выборе
-канала для публикации.
+Public Telegram channels are stored and displayed by `@handle`. Private
+channels are stored by numeric ID, but only the display name is shown in the UI.
+Channels can be searched and removed in settings. Search is also available when
+choosing a destination for publishing.
 
-В конструкторе TikTok/Instagram-поста можно отдельно отключить автора и
-описание.
+The TikTok, Instagram, and YouTube post builder supports Telegram HTML captions,
+including bold, italic, underline, strikethrough, spoiler, links, inline code,
+code blocks, quotes, and expandable quotes. For TikTok and Instagram posts, the
+author and description can also be disabled separately.
 
-Токены и загруженные через интерфейс cookies сохраняются внутри каталога
-`data`, который исключён из Git.
+Tokens and cookies uploaded through the web interface are stored inside the
+`data` directory, which is excluded from Git.
 
-`config.yaml` исключён из Git. Не передавайте этот файл другим людям, поскольку
-он содержит токен Telegram.
+`config.yaml` is excluded from Git. Do not share it because it contains the
+Telegram bot token.
 
-## Веб-интерфейс
+## Web Interface
 
-Для включения авторизации заполните:
+To enable authentication, configure:
 
 ```yaml
 web:
@@ -80,68 +83,67 @@ web:
   password: long_password
 ```
 
-По умолчанию Docker публикует интерфейс только на `127.0.0.1:6767`.
+By default, Docker exposes the interface only on `127.0.0.1:6767`.
 
-## TikTok cookies
+## TikTok Cookies
 
-Для публичных видео TikTok credentials обычно не нужны. Если TikTok требует
-авторизацию, экспортируйте cookies браузера в Netscape-формате в `cookies.txt`,
-раскомментируйте volume в `compose.yaml` и укажите:
+Public TikTok videos usually do not require credentials. If TikTok requires
+authorization, export browser cookies in Netscape format to `cookies.txt`,
+uncomment the volume in `compose.yaml`, and configure:
 
 ```yaml
 tiktok:
   cookies_file: tiktok-cookies.txt
 ```
 
-Логин и пароль TikTok сервису передавать не нужно.
+The service does not need your TikTok login or password.
 
-## Instagram cookies
+## Instagram Cookies
 
-Instagram часто ограничивает скачивание без авторизации. Если видите ошибку
+Instagram often restricts downloads without authorization. If you see
 `Requested content is not available, rate-limit reached or login required`,
-экспортируйте Instagram cookies браузера в Netscape-формате и укажите:
+export browser cookies for Instagram in Netscape format and configure:
 
 ```yaml
 instagram:
   cookies_file: instagram-cookies.txt
 ```
 
-Файл также можно обновить через настройки веб-интерфейса без ручного
-перезапуска сервиса.
+The file can also be updated from the web interface settings without manually
+restarting the service.
 
-## YouTube cookies
+## YouTube Cookies
 
-YouTube иногда требует вход для подтверждения, что запрос выполняет не бот. В
-этом случае экспортируйте YouTube cookies браузера в `youtube-cookies.txt` и
-укажите:
+YouTube can require a signed-in session to confirm that the request is not from
+a bot. In that case, export browser cookies for YouTube to
+`youtube-cookies.txt` and configure:
 
 ```yaml
 youtube:
   cookies_file: youtube-cookies.txt
 ```
 
-YouTube часто ротирует cookies открытых вкладок. Для стабильного экспорта:
+YouTube often rotates cookies for open tabs. For a stable export:
 
-1. Откройте отдельное окно incognito и войдите в YouTube.
-2. В той же единственной incognito-вкладке откройте `https://www.youtube.com/robots.txt`.
-3. Экспортируйте cookies домена `youtube.com` в `youtube-cookies.txt`.
-4. Сразу закройте incognito-окно и больше не открывайте эту сессию.
-5. Перезапустите контейнер командой `docker compose up -d --force-recreate`.
+1. Open a separate incognito window and sign in to YouTube.
+2. In that same single incognito tab, open `https://www.youtube.com/robots.txt`.
+3. Export cookies for the `youtube.com` domain to `youtube-cookies.txt`.
+4. Close the incognito window immediately and do not reuse that session.
+5. Recreate the container with `docker compose up -d --force-recreate`.
 
-## Автоматический мониторинг
+## Automatic Monitoring
 
-Состояние, временные загрузки и рабочие копии cookies хранятся в каталоге
-`data` внутри проекта. Каталог подключается в контейнер как bind mount и
-исключён из Git, поэтому после перезапуска ролики не публикуются повторно.
-`tiktok.channels` можно оставить пустым, если автоматический мониторинг не
-нужен.
+State, temporary downloads, and working cookie copies are stored in the local
+`data` directory. The directory is mounted into the container as a bind mount
+and excluded from Git, so videos are not published again after restart.
+`tiktok.channels` can be left empty if automatic monitoring is not needed.
 
-У TikTok нет доступного webhook для новых роликов, поэтому используется
-периодический опрос. Telegram Bot API принимает загружаемые ботом видео размером
-до 50 МБ.
+TikTok does not provide an accessible webhook for new videos, so the service
+uses periodic polling. Telegram Bot API accepts bot-uploaded videos up to 50 MB.
 
-YouTube-видео скачиваются в максимальном доступном качестве. Если лучшие видео-
-и аудиодорожки раздельные, сервис объединяет их через `ffmpeg`.
+YouTube videos are downloaded in the best available quality. If the best video
+and audio tracks are separate, the service merges them with `ffmpeg`.
 
-Для роликов, которым YouTube требует PO Token, Compose автоматически запускает
-внутренний `bgutil-provider`. Вручную получать и обновлять PO Token не нужно.
+For videos where YouTube requires a PO Token, Compose automatically starts the
+internal `bgutil-provider`. You do not need to obtain or refresh PO Tokens
+manually.
