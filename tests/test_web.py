@@ -31,6 +31,7 @@ class FakeService:
         chat_id: str,
         include_author: bool = True,
         include_description: bool = True,
+        caption_html: str = "",
     ) -> None:
         self.published = (
             video,
@@ -41,6 +42,7 @@ class FakeService:
             chat_id,
             include_author,
             include_description,
+            caption_html,
         )
 
     def import_channel(self, url: str, post_existing: bool, chat_id: str):
@@ -51,9 +53,14 @@ class FakeService:
         return YouTubeVideo("yt1", "YouTube title", url, "https://i.ytimg.com/test.jpg", 60, "Channel")
 
     def publish_youtube(
-        self, video: YouTubeVideo, before_text: str, after_text: str, chat_id: str
+        self,
+        video: YouTubeVideo,
+        before_text: str,
+        after_text: str,
+        chat_id: str,
+        caption_html: str = "",
     ) -> None:
-        self.published_youtube = (video, before_text, after_text, chat_id)
+        self.published_youtube = (video, before_text, after_text, chat_id, caption_html)
 
     def add_telegram_destination(self, name: str, chat_id: str, bot_token: str) -> None:
         self.added_destination = (name, chat_id, bot_token)
@@ -116,7 +123,14 @@ def test_web_flow_uses_caption_builder_texts(tmp_path: Path) -> None:
     )
     assert response.status_code == 200
     assert "Исходный текст" in response.text
-    assert "← На главную" in response.text
+    assert "← Назад" in response.text
+    assert "На главную" in response.text
+    assert "data-return-carousel" in response.text
+    assert "data-return-home" in response.text
+    assert "data-caption-builder" in response.text
+    assert "data-caption-editor" in response.text
+    assert "caption_builder.js" in response.text
+    assert "нажмите ПКМ" in response.text
     job_id = response.text.split("/send/")[1].split('"')[0]
 
     response = client.post(
@@ -125,10 +139,11 @@ def test_web_flow_uses_caption_builder_texts(tmp_path: Path) -> None:
             "before_text": "До цитаты",
             "quote_text": "Новая цитата",
             "after_text": "После цитаты",
+            "caption_html": '<b>Готовый</b> <tg-spoiler>пост</tg-spoiler>',
         },
     )
     assert response.status_code == 302
-    assert service.published[2:] == (
+    assert service.published[2:8] == (
         "Новая цитата",
         "До цитаты",
         "После цитаты",
@@ -136,6 +151,7 @@ def test_web_flow_uses_caption_builder_texts(tmp_path: Path) -> None:
         True,
         True,
     )
+    assert service.published[8] == '<b>Готовый</b> <tg-spoiler>пост</tg-spoiler>'
     assert not path.exists()
 
 
@@ -189,8 +205,8 @@ def test_instagram_video_opens_shared_post_builder(tmp_path: Path) -> None:
     )
 
     assert response.status_code == 200
-    assert "Добавить автора" in response.text
-    assert "Добавить описание" in response.text
+    assert "Конструктор Telegram-поста" in response.text
+    assert "data-caption-editor" in response.text
 
 
 def test_post_builder_can_disable_author_and_description(tmp_path: Path) -> None:
@@ -213,7 +229,7 @@ def test_post_builder_can_disable_author_and_description(tmp_path: Path) -> None
     )
 
     assert response.status_code == 302
-    assert service.published[-2:] == (False, False)
+    assert service.published[6:8] == (False, False)
 
 
 def test_youtube_info_returns_download_links(tmp_path: Path) -> None:
@@ -247,6 +263,9 @@ def test_home_has_post_builder_transition(tmp_path: Path) -> None:
     assert 'data-source-tab="instagram"' in response.text
     assert 'data-source-tab="youtube"' in response.text
     assert "Вставьте ссылку на видео" in response.text
+    assert "async function loadPostBuilder" in response.text
+    assert "async function runInlineScripts" in response.text
+    assert 'fetch(targetUrl, { headers: { "X-Requested-With": "fetch" } })' in response.text
     assert 'data-channel-picker' in response.text
     assert "Telegram-каналы и чаты" in response.text
     assert "Cookies" in response.text
@@ -298,6 +317,18 @@ def test_settings_can_order_destinations_and_manage_monitoring(tmp_path: Path) -
     ).status_code == 302
     assert service.moved_destination == ("@second", "up")
 
+    response = client.post(
+        "/settings/telegram/move",
+        data={"chat_id": "@second", "direction": "down"},
+        headers={"X-Requested-With": "fetch"},
+    )
+    assert response.status_code == 200
+    assert response.get_json()["channels"] == [
+        {"chat_id": "@channel"},
+        {"chat_id": "@second"},
+    ]
+    assert service.moved_destination == ("@second", "down")
+
     assert client.post(
         "/settings/tiktok/monitor", data={"channel": "@author"}
     ).status_code == 302
@@ -325,7 +356,14 @@ def test_tiktok_and_instagram_media_info_returns_download_and_post_links(
     assert response.status_code == 200
     assert "/media/video/" in payload["video_download_url"]
     assert "/media/post/" in payload["post_url"]
+    assert "chat_id=" in payload["post_url"]
+    assert "second" in payload["post_url"]
     assert "/preview/" in payload["preview_url"]
+
+    response = client.get(payload["post_url"])
+    assert response.status_code == 200
+    assert 'name="chat_id" value="@second"' in response.text
+    assert "<span data-channel-label>Second</span>" in response.text
 
 
 def test_youtube_post_can_be_prepared_and_sent(tmp_path: Path) -> None:
@@ -338,11 +376,18 @@ def test_youtube_post_can_be_prepared_and_sent(tmp_path: Path) -> None:
     response = client.get(info["post_url"])
     assert response.status_code == 200
     assert "Подготовьте YouTube-пост" in response.text
+    assert "data-caption-builder" in response.text
     job_id = info["post_url"].rsplit("/", 1)[-1]
 
     response = client.post(
         f"/youtube/send/{job_id}",
-        data={"before_text": "До", "after_text": "После", "chat_id": "@second"},
+        data={
+            "before_text": "До",
+            "after_text": "После",
+            "chat_id": "@second",
+            "caption_html": '<a href="https://youtube.com/watch?v=abc">Ссылка</a>',
+        },
     )
     assert response.status_code == 302
-    assert service.published_youtube[1:] == ("До", "После", "@second")
+    assert service.published_youtube[1:4] == ("До", "После", "@second")
+    assert service.published_youtube[4] == '<a href="https://youtube.com/watch?v=abc">Ссылка</a>'

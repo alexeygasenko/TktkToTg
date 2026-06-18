@@ -235,8 +235,19 @@ def create_app(config: Config, service: TikTokToTelegram) -> Flask:
             service.move_telegram_destination(
                 request.form.get("chat_id", ""), request.form.get("direction", "")
             )
+            if request.headers.get("X-Requested-With") == "fetch":
+                return jsonify(
+                    {
+                        "channels": [
+                            {"chat_id": channel.chat_id}
+                            for channel in telegram_channels()
+                        ]
+                    }
+                )
             return redirect(url_for("index", settings="telegram-moved"))
         except Exception as error:
+            if request.headers.get("X-Requested-With") == "fetch":
+                return jsonify({"error": str(error)}), 400
             return render_template(
                 "index.html", **index_context(settings_error=str(error), settings_open=True)
             ), 400
@@ -336,7 +347,9 @@ def create_app(config: Config, service: TikTokToTelegram) -> Flask:
                     "author": f"@{video.username}",
                     "preview_url": url_for("preview", job_id=job.job_id),
                     "video_download_url": url_for("media_video", job_id=job.job_id),
-                    "post_url": url_for("media_post", job_id=job.job_id),
+                    "post_url": url_for(
+                        "media_post", job_id=job.job_id, chat_id=selected_chat_id
+                    ),
                 }
             )
         except Exception as error:
@@ -355,8 +368,13 @@ def create_app(config: Config, service: TikTokToTelegram) -> Flask:
 
     @app.get("/media/post/<job_id>")
     def media_post(job_id: str):
+        job = jobs.get(job_id)
+        selected_chat_id = request.args.get("chat_id") or job.selected_chat_id
         return render_template(
-            "edit.html", job=jobs.get(job_id), telegram_channels=telegram_channels()
+            "edit.html",
+            job=job,
+            telegram_channels=telegram_channels(),
+            selected_chat_id=selected_chat_id,
         )
 
     @app.post("/youtube/info")
@@ -423,10 +441,11 @@ def create_app(config: Config, service: TikTokToTelegram) -> Flask:
         job = youtube_jobs.get(job_id)
         before_text = request.form.get("before_text", "")
         after_text = request.form.get("after_text", "")
+        caption_html = request.form.get("caption_html", "")
         selected_chat_id = request.form.get("chat_id", "")
         try:
             service.publish_youtube(
-                job.video, before_text, after_text, selected_chat_id
+                job.video, before_text, after_text, selected_chat_id, caption_html
             )
             youtube_jobs.remove(job_id)
             return redirect(url_for("done", source="youtube"))
@@ -439,6 +458,7 @@ def create_app(config: Config, service: TikTokToTelegram) -> Flask:
                 selected_chat_id=selected_chat_id,
                 before_text=before_text,
                 after_text=after_text,
+                caption_html=caption_html,
                 error=str(error),
             ), 502
 
@@ -453,6 +473,7 @@ def create_app(config: Config, service: TikTokToTelegram) -> Flask:
         before_text = request.form.get("before_text", "")
         quote_text = request.form.get("quote_text", "")
         after_text = request.form.get("after_text", "")
+        caption_html = request.form.get("caption_html", "")
         options_present = request.form.get("caption_options_present") == "1"
         include_author = (
             request.form.get("include_author") == "on" if options_present else True
@@ -471,6 +492,7 @@ def create_app(config: Config, service: TikTokToTelegram) -> Flask:
                 selected_chat_id,
                 include_author,
                 include_description,
+                caption_html,
             )
             service.storage.mark(job.video.video_id, job.video.username)
             jobs.remove(job_id)
@@ -483,6 +505,7 @@ def create_app(config: Config, service: TikTokToTelegram) -> Flask:
                 before_text=before_text,
                 quote_text=quote_text,
                 after_text=after_text,
+                caption_html=caption_html,
                 include_author=include_author,
                 include_description=include_description,
                 selected_chat_id=selected_chat_id,

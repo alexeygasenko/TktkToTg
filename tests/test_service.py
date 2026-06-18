@@ -9,6 +9,7 @@ from app.service import (
     build_youtube_caption,
     has_youtube_auth_cookies,
     build_caption,
+    media_author_from_info,
     normalize_channel,
     username_from_info,
     validate_tiktok_url,
@@ -16,6 +17,7 @@ from app.service import (
     is_tiktok_video_url,
     is_instagram_url,
     validate_instagram_url,
+    sanitize_telegram_html,
 )
 
 
@@ -109,6 +111,24 @@ def test_youtube_caption_contains_link_and_custom_text() -> None:
     assert "After" in caption
 
 
+def test_sanitize_telegram_html_keeps_supported_formatting() -> None:
+    caption = sanitize_telegram_html(
+        '<p><strong>Bold</strong> <em>Italic</em> <u>Under</u> '
+        '<s>Strike</s> <tg-spoiler>Spoiler</tg-spoiler> '
+        '<a href="https://example.com">Link</a></p>'
+        '<blockquote expandable>Quote</blockquote><script>bad()</script>'
+    )
+
+    assert "<b>Bold</b>" in caption
+    assert "<i>Italic</i>" in caption
+    assert "<u>Under</u>" in caption
+    assert "<s>Strike</s>" in caption
+    assert "<tg-spoiler>Spoiler</tg-spoiler>" in caption
+    assert '<a href="https://example.com">Link</a>' in caption
+    assert "<blockquote expandable>Quote</blockquote>" in caption
+    assert "<script>" not in caption
+
+
 def test_manual_url_must_be_tiktok() -> None:
     assert validate_tiktok_url("https://vm.tiktok.com/example") == "https://vm.tiktok.com/example"
     with pytest.raises(ValueError):
@@ -118,6 +138,21 @@ def test_manual_url_must_be_tiktok() -> None:
 def test_username_prefers_canonical_url() -> None:
     info = {"uploader_id": "107955", "uploader": "TikTok"}
     assert username_from_info(info, "https://www.tiktok.com/@tiktok/video/123") == "tiktok"
+
+
+def test_instagram_author_prefers_public_username_over_numeric_id() -> None:
+    username, author_url = media_author_from_info(
+        {
+            "uploader_id": "1234567890",
+            "uploader": "creator.name",
+            "uploader_url": "https://www.instagram.com/creator.name/",
+        },
+        "https://www.instagram.com/reel/abc/",
+        "instagram",
+    )
+
+    assert username == "creator.name"
+    assert author_url == "https://www.instagram.com/creator.name/"
 
 
 def test_tiktok_video_and_channel_detection() -> None:
@@ -234,13 +269,13 @@ def test_publish_youtube_sends_photo_to_selected_channel(tmp_path, monkeypatch) 
         "Channel",
     )
 
-    service.publish_youtube(video, "Before", "After", "@second")
+    service.publish_youtube(video, "Before", "After", "@second", "<b>Custom</b>")
 
     assert captured["url"].endswith("/sendPhoto")
     assert "botsecond-token" in captured["url"]
     assert captured["data"]["chat_id"] == "@second"
     assert captured["data"]["photo"] == video.thumbnail_url
-    assert video.url in captured["data"]["caption"]
+    assert captured["data"]["caption"] == "<b>Custom</b>"
 
 
 def test_service_updates_uploaded_cookies_without_restart(tmp_path) -> None:

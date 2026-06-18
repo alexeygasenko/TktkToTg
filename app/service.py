@@ -8,6 +8,7 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -31,6 +32,24 @@ YOUTUBE_AUTH_COOKIE_NAMES = {
     "__Secure-1PSID",
     "__Secure-3PSID",
 }
+TELEGRAM_ALLOWED_TAGS = {
+    "a",
+    "b",
+    "blockquote",
+    "code",
+    "i",
+    "pre",
+    "s",
+    "tg-spoiler",
+    "u",
+}
+TELEGRAM_TAG_ALIASES = {
+    "strong": "b",
+    "em": "i",
+    "ins": "u",
+    "strike": "s",
+    "del": "s",
+}
 
 
 @dataclass(frozen=True)
@@ -52,6 +71,80 @@ class YouTubeVideo:
     thumbnail_url: str
     duration: int
     channel: str
+
+
+class TelegramHTMLSanitizer(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self.stack: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        normalized = TELEGRAM_TAG_ALIASES.get(tag, tag)
+        if tag in {"div", "p"}:
+            self._soft_break()
+            return
+        if tag == "br":
+            self.parts.append("\n")
+            return
+        if normalized not in TELEGRAM_ALLOWED_TAGS:
+            return
+        if normalized == "a":
+            href = next((value for name, value in attrs if name == "href"), "")
+            if not href or not self._safe_href(href):
+                return
+            self.parts.append(f'<a href="{html.escape(href, quote=True)}">')
+        elif normalized == "blockquote":
+            expandable = any(name == "expandable" for name, _ in attrs)
+            self.parts.append("<blockquote expandable>" if expandable else "<blockquote>")
+        else:
+            self.parts.append(f"<{normalized}>")
+        self.stack.append(normalized)
+
+    def handle_endtag(self, tag: str) -> None:
+        normalized = TELEGRAM_TAG_ALIASES.get(tag, tag)
+        if tag in {"div", "p"}:
+            self._soft_break()
+            return
+        if normalized not in TELEGRAM_ALLOWED_TAGS:
+            return
+        if normalized in self.stack:
+            while self.stack:
+                current = self.stack.pop()
+                self.parts.append(f"</{current}>")
+                if current == normalized:
+                    break
+
+    def handle_data(self, data: str) -> None:
+        self.parts.append(html.escape(data))
+
+    def close_open_tags(self) -> None:
+        while self.stack:
+            self.parts.append(f"</{self.stack.pop()}>")
+
+    def _soft_break(self) -> None:
+        text = "".join(self.parts)
+        if text and not text.endswith("\n\n"):
+            self.parts.append("\n\n" if not text.endswith("\n") else "\n")
+
+    @staticmethod
+    def _safe_href(href: str) -> bool:
+        parsed = urlparse(href)
+        return parsed.scheme in {"http", "https", "tg", "mailto"} and bool(
+            parsed.netloc or parsed.scheme == "tg"
+        )
+
+
+def sanitize_telegram_html(value: str) -> str:
+    parser = TelegramHTMLSanitizer()
+    parser.feed(value or "")
+    parser.close_open_tags()
+    text = re.sub(r"\n{3,}", "\n\n", "".join(parser.parts)).strip()
+    if len(text) > MAX_CAPTION_LENGTH:
+        raise ValueError(
+            f"Подпись слишком длинная: {len(text)} символов HTML при лимите {MAX_CAPTION_LENGTH}."
+        )
+    return text
 
 
 def normalize_channel(channel: str) -> tuple[str, str]:
@@ -127,12 +220,26 @@ def media_author_from_info(
     info: dict[str, Any], webpage_url: str, platform: str
 ) -> tuple[str, str]:
     if platform == "instagram":
-        username = str(
-            info.get("uploader_id")
-            or info.get("uploader")
-            or info.get("channel")
-            or "instagram"
-        ).lstrip("@")
+        username = ""
+        for url_key in ("uploader_url", "channel_url"):
+            parsed = urlparse(str(info.get(url_key) or ""))
+            if parsed.netloc.endswith("instagram.com"):
+                candidate = parsed.path.strip("/").split("/", 1)[0]
+                if (
+                    candidate
+                    and candidate not in {"p", "reel", "tv", "stories"}
+                    and re.fullmatch(r"[\w.]+", candidate)
+                ):
+                    username = candidate.lstrip("@")
+                    break
+        if not username:
+            for key in ("uploader", "channel", "creator", "uploader_id"):
+                candidate = str(info.get(key) or "").strip().lstrip("@")
+                if candidate and not candidate.isdigit() and re.fullmatch(r"[\w.]+", candidate):
+                    username = candidate
+                    break
+        if not username:
+            username = "instagram"
         return username, f"https://www.instagram.com/{username}/"
     username = username_from_info(info, webpage_url)
     return username, f"https://www.tiktok.com/@{username}"
@@ -245,6 +352,14 @@ def build_youtube_caption(
         else:
             high = middle - 1
     return render([text[:low] for text in texts], truncated=True)
+
+
+def resolve_caption_html(
+    caption_html: str = "",
+    fallback: str = "",
+) -> str:
+    caption = sanitize_telegram_html(caption_html)
+    return caption or fallback
 
 
 class TikTokToTelegram:
@@ -734,22 +849,24 @@ class TikTokToTelegram:
         chat_id: str | None = None,
         include_author: bool = True,
         include_description: bool = True,
+        caption_html: str = "",
     ) -> None:
         target = self.storage.telegram_destination(chat_id)
+        fallback_caption = build_caption(
+            video,
+            quote_text,
+            before_text,
+            after_text,
+            include_author,
+            include_description,
+        )
         url = f"https://api.telegram.org/bot{target.bot_token}/sendVideo"
         with path.open("rb") as video_file:
             response = requests.post(
                 url,
                 data={
                     "chat_id": target.chat_id,
-                    "caption": build_caption(
-                        video,
-                        quote_text,
-                        before_text,
-                        after_text,
-                        include_author,
-                        include_description,
-                    ),
+                    "caption": resolve_caption_html(caption_html, fallback_caption),
                     "parse_mode": "HTML",
                     "supports_streaming": "true",
                 },
@@ -767,6 +884,7 @@ class TikTokToTelegram:
         before_text: str = "",
         after_text: str = "",
         chat_id: str | None = None,
+        caption_html: str = "",
     ) -> None:
         target = self.storage.telegram_destination(chat_id)
         url = f"https://api.telegram.org/bot{target.bot_token}/sendPhoto"
@@ -775,7 +893,9 @@ class TikTokToTelegram:
             data={
                 "chat_id": target.chat_id,
                 "photo": video.thumbnail_url,
-                "caption": build_youtube_caption(video, before_text, after_text),
+                "caption": resolve_caption_html(
+                    caption_html, build_youtube_caption(video, before_text, after_text)
+                ),
                 "parse_mode": "HTML",
             },
             timeout=60,

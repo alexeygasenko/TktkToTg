@@ -1,7 +1,11 @@
 {% extends "base.html" %}
 {% from "channel_picker.html" import channel_picker %}
-{% block body_class %}source-selecting{% endblock %}
+{% block body_class %}home-page source-selecting{% endblock %}
+{% block brand %}<div class="brand-line"><div class="brand-title">ClipRelay</div><button class="header-action carousel-home-action" type="button" data-carousel-home>На главную</button></div>{% endblock %}
+{% block heading %}{% endblock %}
+{% block lead %}{% endblock %}
 {% block content %}
+<div class="source-carousel-shell" data-source-carousel-shell>
 <nav class="source-tabs" data-source-tabs aria-label="Источник видео">
   <div class="brand-title source-brand" aria-hidden="true">ClipRelay</div>
   <button class="source-tab" type="button" data-source-tab="tiktok" aria-label="Выбрать TikTok">
@@ -23,7 +27,9 @@
     YouTube
   </button>
 </nav>
+</div>
 
+<div class="source-panel-carousel" data-source-panel-carousel hidden>
 <section class="card service-card source-panel" data-source-panel="tiktok" hidden>
   <div class="service-heading"><span class="service-mark tiktok-mark">TT</span><div><h2>TikTok</h2><p>Скачивание видео, публикация и импорт канала</p></div></div>
   <div class="mode-tabs">
@@ -73,6 +79,7 @@
     <img id="youtube-thumbnail" alt="Превью YouTube-видео"><div class="youtube-meta"><h3 id="youtube-title"></h3><p id="youtube-channel"></p><div class="download-actions"><a id="youtube-thumbnail-download" class="secondary">Скачать превью</a><a id="youtube-video-download" class="secondary">Скачать видео</a><a id="youtube-post" class="button">Подготовить пост</a></div></div>
   </article>
 </section>
+</div>
 
 <button class="settings-toggle" type="button" data-settings-open aria-label="Открыть настройки"><span></span><span></span><span></span></button>
 <div class="settings-overlay" data-settings-close></div>
@@ -91,8 +98,8 @@
         <button type="submit">Добавить</button>
       </form>
       <form id="discover-telegram-form" action="{{ url_for('discover_telegram_channels') }}" method="post" autocomplete="off"></form>
-      <div class="saved-channels"><h3>Порядок и удаление</h3><input type="search" autocomplete="off" placeholder="Поиск по названию или тегу" data-settings-channel-search><div class="saved-channel-list">
-        {% for channel in telegram_channels %}<div class="saved-channel" data-settings-channel data-channel-search-value="{{ channel.name }} {{ channel.chat_id }}"><span><strong>{{ channel.name }}</strong><small>{% if channel.chat_id.startswith('@') %}{{ channel.chat_id }} · {% endif %}{{ "чат" if channel.destination_type in ("group", "supergroup") else "канал" }}</small></span><div class="channel-controls"><form action="{{ url_for('move_telegram_channel') }}" method="post"><input type="hidden" name="chat_id" value="{{ channel.chat_id }}"><button class="channel-order secondary" name="direction" value="up" aria-label="Поднять"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5l6 7h-4v7h-4v-7H6l6-7z"/></svg></button><button class="channel-order secondary" name="direction" value="down" aria-label="Опустить"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19l-6-7h4V5h4v7h4l-6 7z"/></svg></button></form><form action="{{ url_for('delete_telegram_channel') }}" method="post"><input type="hidden" name="chat_id" value="{{ channel.chat_id }}"><button class="channel-delete secondary" type="submit" aria-label="Удалить {{ channel.name }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.8 6.4 12 10.6l4.2-4.2 1.4 1.4-4.2 4.2 4.2 4.2-1.4 1.4-4.2-4.2-4.2 4.2-1.4-1.4 4.2-4.2-4.2-4.2 1.4-1.4z"/></svg></button></form></div></div>{% endfor %}
+      <div class="saved-channels"><h3>Порядок и удаление</h3><input type="search" autocomplete="off" placeholder="Поиск по названию или тегу" data-settings-channel-search><div class="saved-channel-list" data-settings-channel-list>
+        {% for channel in telegram_channels %}<div class="saved-channel" data-settings-channel data-channel-id="{{ channel.chat_id }}" data-channel-search-value="{{ channel.name }} {{ channel.chat_id }}"><span><strong>{{ channel.name }}</strong><small>{% if channel.chat_id.startswith('@') %}{{ channel.chat_id }} · {% endif %}{{ "чат" if channel.destination_type in ("group", "supergroup") else "канал" }}</small></span><div class="channel-controls"><form action="{{ url_for('move_telegram_channel') }}" method="post" data-channel-move-form><input type="hidden" name="chat_id" value="{{ channel.chat_id }}"><button class="channel-order secondary" name="direction" value="up" aria-label="Поднять"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5l6 7h-4v7h-4v-7H6l6-7z"/></svg></button><button class="channel-order secondary" name="direction" value="down" aria-label="Опустить"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19l-6-7h4V5h4v7h4l-6 7z"/></svg></button></form><form action="{{ url_for('delete_telegram_channel') }}" method="post"><input type="hidden" name="chat_id" value="{{ channel.chat_id }}"><button class="channel-delete secondary" type="submit" aria-label="Удалить {{ channel.name }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.8 6.4 12 10.6l4.2-4.2 1.4 1.4-4.2 4.2 4.2 4.2-1.4 1.4-4.2-4.2-4.2 4.2-1.4-1.4 4.2-4.2-4.2-4.2 1.4-1.4z"/></svg></button></form></div></div>{% endfor %}
       </div></div>
     </details>
     <details class="settings-section"><summary>Мониторинг TikTok</summary>
@@ -119,23 +126,279 @@
 
   const sourceOrder = ["tiktok", "instagram", "youtube"];
   let activeSourceIndex = null;
-  document.querySelectorAll("[data-source-tab]").forEach(tab => tab.addEventListener("click", () => {
-    const nextSourceIndex = sourceOrder.indexOf(tab.dataset.sourceTab);
-    if (activeSourceIndex === nextSourceIndex) return;
-    const slideClass = activeSourceIndex === null ? "" : (nextSourceIndex > activeSourceIndex ? "slide-from-right" : "slide-from-left");
-    document.querySelectorAll("[data-source-tab]").forEach(item => item.classList.toggle("active", item === tab));
-    document.querySelector("[data-source-tabs]").classList.add("selected");
-    document.body.classList.remove("source-selecting");
-    document.querySelectorAll("[data-source-panel]").forEach(panel => {
-      const isActive = panel.dataset.sourcePanel === tab.dataset.sourceTab;
-      panel.classList.remove("slide-from-right", "slide-from-left");
-      panel.hidden = !isActive;
-      panel.classList.toggle("active", isActive);
-      if (isActive && slideClass) {
-        panel.classList.add(slideClass);
+  let homeSceneMain = null;
+  let homeSceneUrl = null;
+  function showPageTransition() {
+    const transition = document.getElementById("page-transition");
+    transition.hidden = false;
+    requestAnimationFrame(() => transition.classList.add("active"));
+  }
+  function wait(ms) {
+    return new Promise((resolve) => window.setTimeout(resolve, ms));
+  }
+  function loadScriptOnce(src) {
+    return new Promise((resolve, reject) => {
+      const url = new URL(src, window.location.href);
+      if (url.pathname.endsWith("/caption_builder.js") && window.initCaptionBuilders) {
+        resolve();
+        return;
       }
+      const existing = [...document.scripts].find((script) => (
+        script.src === src && script.dataset.clipRelayLoaded === "1"
+      ));
+      if (existing) {
+        resolve();
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = src;
+      script.dataset.clipRelayLoaded = "1";
+      script.onload = resolve;
+      script.onerror = reject;
+      document.body.appendChild(script);
     });
+  }
+  async function runInlineScripts(container) {
+    for (const script of container.querySelectorAll("script")) {
+      if (script.src) {
+        await loadScriptOnce(script.src);
+      } else {
+        Function(script.textContent)();
+      }
+    }
+    window.initCaptionBuilders?.(container);
+  }
+  function createReturnCarouselGhost(main) {
+    const shell = main.querySelector("[data-source-carousel-shell]");
+    const panels = main.querySelector("[data-source-panel-carousel]");
+    if (!shell) return null;
+    const ghost = document.createElement("div");
+    const shellClone = shell.cloneNode(true);
+    const panelsClone = panels ? panels.cloneNode(true) : null;
+    shellClone.classList.remove("source-leaving-up", "carousel-entering");
+    ghost.className = "scene-carousel-ghost";
+    ghost.setAttribute("aria-hidden", "true");
+    ghost.appendChild(shellClone);
+    if (panelsClone) {
+      panelsClone.hidden = false;
+      panelsClone.classList.remove("carousel-entering");
+      panelsClone.querySelectorAll("[data-source-panel]").forEach(panel => {
+        panel.hidden = false;
+      });
+      ghost.appendChild(panelsClone);
+    }
+    document.body.appendChild(ghost);
+    window.setTimeout(() => ghost.remove(), 620);
+    return ghost;
+  }
+  function resetHomeScene(main, clearLinks = true) {
+    activeSourceIndex = null;
+    const sourceTabs = main.querySelector("[data-source-tabs]");
+    const carouselShell = main.querySelector("[data-source-carousel-shell]");
+    const panelCarousel = main.querySelector("[data-source-panel-carousel]");
+    sourceTabs.classList.remove("selected");
+    carouselShell.classList.remove("selected", "source-leaving-up", "carousel-entering");
+    panelCarousel.classList.remove("carousel-entering");
+    panelCarousel.hidden = true;
+    main.querySelectorAll("[data-source-tab]").forEach(item => {
+      item.classList.remove("active", "carousel-active", "carousel-left", "carousel-right");
+    });
+    main.querySelectorAll("[data-source-panel]").forEach(panel => {
+      panel.hidden = true;
+      panel.classList.remove("active", "carousel-active", "carousel-left", "carousel-right");
+      panel.removeAttribute("aria-hidden");
+    });
+    if (clearLinks) {
+      main.querySelectorAll("#tiktok_video_url, #tiktok_url, #instagram_url, #youtube_url").forEach(input => {
+        input.value = "";
+      });
+      main.querySelectorAll("[data-media-result], #youtube-result").forEach(result => {
+        result.hidden = true;
+        result.classList.remove("revealing");
+      });
+      main.querySelectorAll("[data-media-status]").forEach(status => {
+        status.textContent = "Вставьте ссылку, чтобы подготовить видео.";
+      });
+      const youtubeStatus = main.querySelector("#youtube-status");
+      if (youtubeStatus) youtubeStatus.textContent = "Вставьте ссылку, превью загрузится автоматически.";
+    }
+  }
+  async function loadPostBuilder(postLink) {
+    const targetUrl = postLink.href;
+    const currentMain = document.querySelector("main.shell");
+    homeSceneMain = currentMain;
+    homeSceneUrl = window.location.href;
+    document.body.classList.add("scene-transitioning", "preparing-post");
+    try {
+      const [response] = await Promise.all([
+        fetch(targetUrl, { headers: { "X-Requested-With": "fetch" } }),
+        wait(560),
+      ]);
+      if (!response.ok) throw new Error("Не удалось открыть конструктор публикации");
+      const html = await response.text();
+      const parsed = new DOMParser().parseFromString(html, "text/html");
+      const nextMain = parsed.querySelector("main.shell");
+      if (!nextMain) throw new Error("Конструктор публикации не найден");
+      nextMain.classList.add("post-builder-enter");
+      document.body.className = `${parsed.body.className} inline-post-builder-page scene-transitioning`.trim();
+      currentMain.replaceWith(nextMain);
+      history.pushState({}, "", targetUrl);
+      await runInlineScripts(nextMain);
+      window.scrollTo({ top: 0, behavior: "instant" });
+      window.setTimeout(() => document.body.classList.remove("scene-transitioning"), 740);
+    } catch (error) {
+      console.error(error);
+      window.location.href = targetUrl;
+    }
+  }
+  async function returnHomeFromBuilder(targetUrl) {
+    const editorMain = document.querySelector("main.shell");
+    document.body.classList.add("scene-transitioning", "returning-home");
+    editorMain.classList.add("post-builder-exit-down");
+    await wait(460);
+    if (!homeSceneMain) {
+      window.location.href = targetUrl;
+      return;
+    }
+    createReturnCarouselGhost(homeSceneMain);
+    await wait(440);
+    resetHomeScene(homeSceneMain);
+    document.body.className = "home-page source-selecting scene-transitioning returning-home-buttons";
+    homeSceneMain.classList.add("home-buttons-enter");
+    editorMain.replaceWith(homeSceneMain);
+    history.pushState({}, "", homeSceneUrl || targetUrl);
+    window.scrollTo({ top: 0, behavior: "instant" });
+    await wait(680);
+    homeSceneMain.classList.remove("home-buttons-enter");
+    document.body.classList.remove("scene-transitioning", "returning-home", "returning-home-buttons");
+  }
+  async function returnCarouselFromBuilder(targetUrl) {
+    const editorMain = document.querySelector("main.shell");
+    document.body.classList.add("scene-transitioning", "returning-carousel");
+    editorMain.classList.add("post-builder-exit-down");
+    await wait(460);
+    if (!homeSceneMain) {
+      window.location.href = targetUrl;
+      return;
+    }
+    document.body.className = "home-page scene-transitioning returning-carousel";
+    homeSceneMain.classList.add("carousel-return-enter");
+    editorMain.replaceWith(homeSceneMain);
+    history.pushState({}, "", homeSceneUrl || targetUrl);
+    window.scrollTo({ top: 0, behavior: "instant" });
+    await wait(680);
+    homeSceneMain.classList.remove("carousel-return-enter");
+    document.body.classList.remove("scene-transitioning", "returning-carousel");
+  }
+  async function returnStartFromCarousel() {
+    const main = document.querySelector("main.shell");
+    document.body.classList.add("scene-transitioning", "carousel-to-start");
+    await wait(440);
+    resetHomeScene(main, true);
+    document.body.className = "home-page source-selecting scene-transitioning returning-home-buttons";
+    main.classList.add("home-buttons-enter");
+    window.scrollTo({ top: 0, behavior: "instant" });
+    await wait(680);
+    main.classList.remove("home-buttons-enter");
+    document.body.classList.remove("scene-transitioning", "returning-home-buttons");
+  }
+  async function cancelPreparedPost(action) {
+    if (action) {
+      try {
+        await fetch(action, {
+          method: "POST",
+          headers: { "X-Requested-With": "fetch" },
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    returnHomeFromBuilder("{{ url_for('index') }}");
+  }
+  function revealResult(result) {
+    result.hidden = false;
+    result.classList.remove("revealing");
+    void result.offsetWidth;
+    result.classList.add("revealing");
+  }
+  function applyCarouselPosition(item, offset) {
+    item.classList.remove("carousel-active", "carousel-left", "carousel-right");
+    if (offset === 0) item.classList.add("carousel-active");
+    if (offset === 1) item.classList.add("carousel-right");
+    if (offset === sourceOrder.length - 1) item.classList.add("carousel-left");
+  }
+  function updateSourceCarousel(activeIndex) {
+    document.querySelectorAll("[data-source-tab]").forEach(item => {
+      const itemIndex = sourceOrder.indexOf(item.dataset.sourceTab);
+      const offset = (itemIndex - activeIndex + sourceOrder.length) % sourceOrder.length;
+      applyCarouselPosition(item, offset);
+    });
+    document.querySelectorAll("[data-source-panel]").forEach(panel => {
+      const panelIndex = sourceOrder.indexOf(panel.dataset.sourcePanel);
+      const offset = (panelIndex - activeIndex + sourceOrder.length) % sourceOrder.length;
+      applyCarouselPosition(panel, offset);
+      panel.hidden = false;
+      panel.classList.toggle("active", offset === 0);
+      panel.setAttribute("aria-hidden", offset === 0 ? "false" : "true");
+    });
+  }
+  function selectSource(source) {
+    const nextSourceIndex = sourceOrder.indexOf(source);
+    if (activeSourceIndex === nextSourceIndex) return;
+    const firstSelection = activeSourceIndex === null;
+    const carouselShell = document.querySelector("[data-source-carousel-shell]");
+    const panelCarousel = document.querySelector("[data-source-panel-carousel]");
+    document.querySelectorAll("[data-source-tab]").forEach(item => item.classList.toggle("active", item.dataset.sourceTab === source));
+    if (firstSelection) {
+      activeSourceIndex = nextSourceIndex;
+      document.body.classList.add("scene-transitioning", "source-to-carousel");
+      carouselShell.classList.add("source-leaving-up");
+      window.setTimeout(() => {
+        document.querySelector("[data-source-tabs]").classList.add("selected");
+        carouselShell.classList.add("selected");
+        carouselShell.classList.remove("source-leaving-up");
+        panelCarousel.hidden = false;
+        panelCarousel.classList.add("carousel-entering");
+        updateSourceCarousel(nextSourceIndex);
+        document.body.classList.remove("source-selecting");
+        window.setTimeout(() => {
+          panelCarousel.classList.remove("carousel-entering");
+          document.body.classList.remove("scene-transitioning", "source-to-carousel");
+        }, 760);
+      }, 380);
+      return;
+    }
+    document.querySelector("[data-source-tabs]").classList.add("selected");
+    carouselShell.classList.add("selected");
+    panelCarousel.hidden = false;
+    updateSourceCarousel(nextSourceIndex);
+    document.body.classList.remove("source-selecting");
     activeSourceIndex = nextSourceIndex;
+  }
+  function switchByCarouselSideClick(container, activeSelector, event) {
+    if (activeSourceIndex === null || !container || container.hidden || !container.classList.contains("selected") && container.matches("[data-source-tabs]")) return false;
+    const activeItem = container.querySelector(activeSelector);
+    if (!activeItem) return false;
+    const activeRect = activeItem.getBoundingClientRect();
+    const side = event.clientX < activeRect.left ? -1 : (event.clientX > activeRect.right ? 1 : 0);
+    if (!side) return false;
+    event.preventDefault();
+    event.stopPropagation();
+    const nextIndex = (activeSourceIndex + side + sourceOrder.length) % sourceOrder.length;
+    selectSource(sourceOrder[nextIndex]);
+    return true;
+  }
+  document.querySelector("[data-source-tabs]").addEventListener("click", event => {
+    switchByCarouselSideClick(event.currentTarget, ".source-tab.carousel-active", event);
+  }, true);
+  document.querySelector("[data-source-panel-carousel]").addEventListener("click", event => {
+    switchByCarouselSideClick(event.currentTarget, ".source-panel.carousel-active", event);
+  }, true);
+  document.querySelectorAll("[data-source-tab]").forEach(tab => tab.addEventListener("click", () => selectSource(tab.dataset.sourceTab)));
+  document.querySelectorAll("[data-source-panel]").forEach(panel => panel.addEventListener("click", event => {
+    if (panel.classList.contains("carousel-active")) return;
+    event.preventDefault();
+    selectSource(panel.dataset.sourcePanel);
   }));
   document.querySelectorAll("[data-tiktok-mode]").forEach(tab => tab.addEventListener("click", () => {
     document.querySelectorAll("[data-tiktok-mode]").forEach(item => item.classList.toggle("active", item === tab));
@@ -147,21 +410,100 @@
     const input = document.getElementById(source === "tiktok" ? "tiktok_video_url" : "instagram_url");
     const result = document.querySelector(`[data-media-result="${source}"]`);
     const status = document.querySelector(`[data-media-status="${source}"]`);
-    if (!input.value.trim()) { result.hidden = true; status.textContent = "Вставьте ссылку, чтобы подготовить видео."; return; }
-    status.textContent = "Загружаю видео…"; result.hidden = true;
+    if (!input.value.trim()) { result.hidden = true; result.classList.remove("revealing"); status.textContent = "Вставьте ссылку, чтобы подготовить видео."; return; }
+    status.textContent = "Загружаю видео…"; result.hidden = true; result.classList.remove("revealing");
     const picker = input.closest(".source-panel").querySelector("[data-channel-picker] input[type=hidden]");
     try {
       const response = await fetch("{{ url_for('media_info') }}", {method: "POST", body: new URLSearchParams({media_url: input.value.trim(), chat_id: picker.value})});
       const data = await response.json(); if (!response.ok) throw new Error(data.error || "Не удалось обработать ссылку");
       result.querySelector("[data-media-preview]").src = data.preview_url; result.querySelector("[data-media-author]").textContent = data.author; result.querySelector("[data-media-description]").textContent = data.description;
-      result.querySelector("[data-media-download]").href = data.video_download_url; result.querySelector("[data-media-post]").href = data.post_url; status.textContent = ""; result.hidden = false;
+      result.querySelector("[data-media-download]").href = data.video_download_url; result.querySelector("[data-media-post]").href = data.post_url; status.textContent = ""; revealResult(result);
     } catch (error) { status.textContent = error.message; }
   }
   ["tiktok", "instagram"].forEach(source => { const input = document.getElementById(source === "tiktok" ? "tiktok_video_url" : "instagram_url"); input.addEventListener("input", () => { clearTimeout(timers[source]); timers[source] = setTimeout(() => inspectMedia(source), 600); }); input.addEventListener("paste", () => { clearTimeout(timers[source]); timers[source] = setTimeout(() => inspectMedia(source), 50); }); });
 
   const youtubeInput = document.getElementById("youtube_url"); let youtubeTimer;
-  async function inspectYouTube() { const url = youtubeInput.value.trim(), status = document.getElementById("youtube-status"), result = document.getElementById("youtube-result"); if (!url) { result.hidden = true; return; } status.textContent = "Получаю информацию о видео…"; result.hidden = true; try { const response = await fetch("{{ url_for('youtube_info') }}", {method:"POST", body:new URLSearchParams({youtube_url:url})}); const data = await response.json(); if (!response.ok) throw new Error(data.error); document.getElementById("youtube-thumbnail").src=data.thumbnail_url; document.getElementById("youtube-title").textContent=data.title; document.getElementById("youtube-channel").textContent=data.channel; document.getElementById("youtube-thumbnail-download").href=data.thumbnail_download_url; document.getElementById("youtube-video-download").href=data.video_download_url; document.getElementById("youtube-post").href=data.post_url; status.textContent=""; result.hidden=false; } catch(error) { status.textContent=error.message; } }
+  async function inspectYouTube() { const url = youtubeInput.value.trim(), status = document.getElementById("youtube-status"), result = document.getElementById("youtube-result"); if (!url) { result.hidden = true; result.classList.remove("revealing"); return; } status.textContent = "Получаю информацию о видео…"; result.hidden = true; result.classList.remove("revealing"); try { const response = await fetch("{{ url_for('youtube_info') }}", {method:"POST", body:new URLSearchParams({youtube_url:url})}); const data = await response.json(); if (!response.ok) throw new Error(data.error); document.getElementById("youtube-thumbnail").src=data.thumbnail_url; document.getElementById("youtube-title").textContent=data.title; document.getElementById("youtube-channel").textContent=data.channel; document.getElementById("youtube-thumbnail-download").href=data.thumbnail_download_url; document.getElementById("youtube-video-download").href=data.video_download_url; document.getElementById("youtube-post").href=data.post_url; status.textContent=""; revealResult(result); } catch(error) { status.textContent=error.message; } }
   youtubeInput.addEventListener("input", () => { clearTimeout(youtubeTimer); youtubeTimer=setTimeout(inspectYouTube,600); }); youtubeInput.addEventListener("paste", () => { clearTimeout(youtubeTimer); youtubeTimer=setTimeout(inspectYouTube,50); });
-  document.getElementById("tiktok-channel-form").addEventListener("submit", event => { if (!event.currentTarget.checkValidity()) return; const transition=document.getElementById("page-transition"); transition.hidden=false; requestAnimationFrame(()=>transition.classList.add("active")); });
+  document.addEventListener("click", event => {
+    const postLink = event.target.closest("[data-media-post], #youtube-post");
+    if (!postLink || !postLink.getAttribute("href")) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    event.preventDefault();
+    loadPostBuilder(postLink);
+  });
+  document.addEventListener("click", event => {
+    const carouselHome = event.target.closest("[data-carousel-home]");
+    if (!carouselHome) return;
+    event.preventDefault();
+    returnStartFromCarousel();
+  });
+  document.addEventListener("click", event => {
+    const carouselLink = event.target.closest(".inline-post-builder-page [data-return-carousel]");
+    if (!carouselLink || !carouselLink.getAttribute("href")) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    event.preventDefault();
+    returnCarouselFromBuilder(carouselLink.href);
+  });
+  document.addEventListener("click", event => {
+    const homeLink = event.target.closest(".inline-post-builder-page [data-return-home]");
+    if (!homeLink || !homeLink.getAttribute("href")) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    event.preventDefault();
+    cancelPreparedPost(homeLink.dataset.cancelUrl).then(() => returnHomeFromBuilder(homeLink.href));
+  });
+  function animateChannelReorder(list, order, activeItem) {
+    const itemsById = new Map([...list.querySelectorAll("[data-settings-channel]")].map((item) => [item.dataset.channelId, item]));
+    const firstRects = new Map([...itemsById.values()].map((item) => [item, item.getBoundingClientRect()]));
+    order.forEach((chatId) => {
+      const item = itemsById.get(chatId);
+      if (item) list.appendChild(item);
+    });
+    for (const item of itemsById.values()) {
+      const first = firstRects.get(item);
+      const last = item.getBoundingClientRect();
+      const dx = first.left - last.left;
+      const dy = first.top - last.top;
+      if (!dx && !dy) continue;
+      item.animate(
+        [
+          { transform: `translate(${dx}px, ${dy}px)` },
+          { transform: "translate(0, 0)" },
+        ],
+        { duration: 320, easing: "cubic-bezier(.2, .8, .2, 1)" },
+      );
+    }
+    if (activeItem) {
+      activeItem.classList.add("reordering");
+      window.setTimeout(() => activeItem.classList.remove("reordering"), 340);
+    }
+  }
+  document.querySelectorAll("[data-channel-move-form]").forEach(form => form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const list = form.closest("[data-settings-channel-list]");
+    const item = form.closest("[data-settings-channel]");
+    const submitter = event.submitter;
+    if (!list || !item || !submitter) return;
+    const body = new URLSearchParams(new FormData(form));
+    body.set("direction", submitter.value);
+    list.classList.add("reordering");
+    try {
+      const response = await fetch(form.action, {
+        method: "POST",
+        headers: { "X-Requested-With": "fetch" },
+        body,
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Не удалось изменить порядок");
+      animateChannelReorder(list, data.channels.map((channel) => channel.chat_id), item);
+    } catch (error) {
+      item.classList.add("reordering");
+      window.setTimeout(() => item.classList.remove("reordering"), 340);
+      console.error(error);
+    } finally {
+      window.setTimeout(() => list.classList.remove("reordering"), 340);
+    }
+  }));
+  document.getElementById("tiktok-channel-form").addEventListener("submit", event => { if (!event.currentTarget.checkValidity()) return; showPageTransition(); });
 </script>
 {% endblock %}

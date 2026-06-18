@@ -2,7 +2,8 @@
 {% from "channel_picker.html" import channel_picker %}
 {% block title %}Подготовка YouTube-поста{% endblock %}
 {% block body_class %}editor-page{% endblock %}
-{% block eyebrow %}<a class="eyebrow back-link" href="{{ url_for('index') }}">← На главную</a>{% endblock %}
+{% block eyebrow %}{% endblock %}
+{% block brand %}<div class="brand-line"><div class="brand-title">ClipRelay</div><a class="header-action back-link" href="{{ url_for('index') }}" data-return-carousel>← Назад</a><a class="header-action back-link" href="{{ url_for('index') }}" data-return-home>На главную</a></div>{% endblock %}
 {% block heading %}Подготовьте YouTube-пост{% endblock %}
 {% block lead %}В Telegram отправятся превью, ссылка на видео и подготовленный текст.{% endblock %}
 {% block content %}
@@ -16,47 +17,21 @@
     <label for="chat_id">Опубликовать в Telegram-канал</label>
     {{ channel_picker("chat_id", telegram_channels, selected_chat_id if selected_chat_id is defined else "") }}
 
-    <div class="caption-builder">
-      <label for="before_text">Текст до ссылки</label>
-      <textarea id="before_text" name="before_text" rows="5" maxlength="3000" autocomplete="off" placeholder="Необязательный текст">{{ before_text if before_text is defined else "" }}</textarea>
-
-      <label for="after_text">Текст после ссылки</label>
-      <textarea id="after_text" name="after_text" rows="5" maxlength="3000" autocomplete="off" placeholder="Необязательный текст">{{ after_text if after_text is defined else "" }}</textarea>
-    </div>
-
-    <div class="caption-preview">
-      <strong>Предпросмотр подписи</strong>
-      <div id="caption-preview-content">
-        <p id="preview-before"></p>
-        <a href="{{ job.video.url }}" target="_blank" rel="noreferrer">{{ job.video.title }}</a>
-        <p>{{ job.video.channel }}</p>
-        <p id="preview-after"></p>
+    <input type="hidden" name="before_text" value="">
+    <input type="hidden" name="after_text" value="">
+    <div class="telegram-builder" data-caption-builder>
+      <input type="hidden" name="caption_html" data-caption-html>
+      <label for="caption-editor">Конструктор Telegram-поста</label>
+      <p class="hint">Выделите текст и нажмите ПКМ, чтобы открыть форматирование Telegram.</p>
+      <div id="caption-editor" class="telegram-editor" contenteditable="true" spellcheck="true" data-caption-editor>{% if caption_html is defined and caption_html %}{{ caption_html|safe }}{% else %}<p><a href="{{ job.video.url }}" target="_blank" rel="noreferrer">{{ job.video.title }}</a></p><p>{{ job.video.channel }}</p>{% endif %}</div>
+      <div class="caption-preview">
+        <strong>Предпросмотр Telegram</strong>
+        <div class="telegram-preview-body" data-caption-preview></div>
       </div>
     </div>
-
-    <div class="actions">
-      <a class="secondary" href="{{ url_for('index') }}">Отмена</a>
-      <button type="submit">Отправить в Telegram</button>
-    </div>
+    <div class="actions"><button type="submit">Отправить в Telegram</button></div>
   </form>
 </section>
-<script>
-  const fields = {
-    before: document.getElementById("before_text"),
-    after: document.getElementById("after_text"),
-  };
-  const previews = {
-    before: document.getElementById("preview-before"),
-    after: document.getElementById("preview-after"),
-  };
-  function updatePreview() {
-    for (const key of Object.keys(fields)) {
-      const value = fields[key].value.trim();
-      previews[key].textContent = value;
-      previews[key].hidden = !value;
-    }
-  }
-  Object.values(fields).forEach((field) => field.addEventListener("input", updatePreview));
-  updatePreview();
-</script>
+<script src="{{ url_for('static', filename='caption_builder.js', v=4) }}"></script>
+<script>window.initCaptionBuilders?.(document.currentScript.closest("main") || document);</script>
 {% endblock %}
