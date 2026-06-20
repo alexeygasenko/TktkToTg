@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from app.config import Config, TelegramChannel
@@ -15,9 +17,11 @@ from app.service import (
     validate_tiktok_url,
     validate_youtube_url,
     is_tiktok_video_url,
+    is_tiktok_photo_url,
     is_instagram_url,
     validate_instagram_url,
     sanitize_telegram_html,
+    tiktok_image_post_urls_from_data,
 )
 
 
@@ -27,6 +31,27 @@ def test_normalize_channel() -> None:
         "https://www.tiktok.com/@example",
     )
     assert normalize_channel("@example") == ("example", "https://www.tiktok.com/@example")
+
+
+def test_tiktok_image_post_urls_from_data() -> None:
+    data = {
+        "ItemModule": {
+            "123": {
+                "imagePost": {
+                    "images": [
+                        {"imageURL": {"urlList": ["https://p16-common-sign.tiktokcdn-us.com/tos/image-one.jpeg?x=1"]}},
+                        {"imageURL": {"urlList": ["https://cdn.test/two.jpeg"]}},
+                        {"imageURL": {"urlList": ["https://p19-common-sign.tiktokcdn-us.com/tos/image-one.jpeg?x=2"]}},
+                    ]
+                }
+            }
+        }
+    }
+
+    assert tiktok_image_post_urls_from_data(data) == [
+        "https://p16-common-sign.tiktokcdn-us.com/tos/image-one.jpeg?x=1",
+        "https://cdn.test/two.jpeg",
+    ]
 
 
 def test_caption_escapes_html_and_uses_quote() -> None:
@@ -157,6 +182,8 @@ def test_instagram_author_prefers_public_username_over_numeric_id() -> None:
 
 def test_tiktok_video_and_channel_detection() -> None:
     assert is_tiktok_video_url("https://www.tiktok.com/@author/video/123")
+    assert is_tiktok_video_url("https://www.tiktok.com/@author/photo/123")
+    assert is_tiktok_photo_url("https://www.tiktok.com/@author/photo/123")
     assert not is_tiktok_video_url("https://www.tiktok.com/@author")
     assert normalize_channel("https://www.tiktok.com/@author?lang=en")[0] == "author"
 
@@ -208,9 +235,9 @@ def test_service_copies_cookies_to_writable_data_dir(tmp_path) -> None:
 
     service = TikTokToTelegram(config)
 
-    assert service.tiktok_cookies_file == data_dir / "tiktok-cookies.txt"
-    assert service.instagram_cookies_file == data_dir / "instagram-cookies.txt"
-    assert service.youtube_cookies_file == data_dir / "youtube-cookies.txt"
+    assert service.tiktok_cookies_file == data_dir / "users" / "1" / "tiktok-cookies.txt"
+    assert service.instagram_cookies_file == data_dir / "users" / "1" / "instagram-cookies.txt"
+    assert service.youtube_cookies_file == data_dir / "users" / "1" / "youtube-cookies.txt"
 
 
 def test_detects_youtube_auth_cookies(tmp_path) -> None:
@@ -278,6 +305,220 @@ def test_publish_youtube_sends_photo_to_selected_channel(tmp_path, monkeypatch) 
     assert captured["data"]["caption"] == "<b>Custom</b>"
 
 
+def test_publish_tiktok_image_post_sends_media_group(tmp_path, monkeypatch) -> None:
+    config = Config(
+        telegram_bot_token="token",
+        telegram_chat_id="@main",
+        tiktok_channels=(),
+        poll_interval_seconds=300,
+        scan_limit=15,
+        post_existing=False,
+        data_dir=tmp_path,
+        cookies_file=None,
+        instagram_cookies_file=None,
+        youtube_cookies_file=None,
+        youtube_po_token_provider_url=None,
+        web_host="127.0.0.1",
+        web_port=8080,
+        web_username=None,
+        web_password=None,
+        telegram_channels=(
+            TelegramChannel("Main", "@main"),
+            TelegramChannel("Second", "@second"),
+        ),
+    )
+    first = tmp_path / "first.jpg"
+    second = tmp_path / "second.jpg"
+    first.write_bytes(b"one")
+    second.write_bytes(b"two")
+    captured = {}
+
+    class Response:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"ok": True}
+
+    def fake_post(url, data, files, timeout):
+        captured.update(url=url, data=data, files=set(files), timeout=timeout)
+        return Response()
+
+    monkeypatch.setattr("app.service.requests.post", fake_post)
+    service = TikTokToTelegram(config)
+    service.storage.add_telegram_destination("Second", "@second", "second-token")
+    video = Video(
+        "tt1",
+        "author",
+        "Caption",
+        "https://www.tiktok.com/@author/video/tt1",
+        0,
+        media_type="image",
+    )
+
+    service.publish(video, (first, second), chat_id="@second")
+
+    assert captured["url"].endswith("/sendMediaGroup")
+    assert captured["data"]["chat_id"] == "@second"
+    media = json.loads(captured["data"]["media"])
+    assert [item["type"] for item in media] == ["photo", "photo"]
+    assert media[0]["caption"]
+    assert media[0]["parse_mode"] == "HTML"
+    assert captured["files"] == {"photo0", "photo1"}
+
+
+def test_download_images_skips_duplicate_signed_urls(tmp_path, monkeypatch) -> None:
+    config = Config(
+        telegram_bot_token="token",
+        telegram_chat_id="@main",
+        tiktok_channels=(),
+        poll_interval_seconds=300,
+        scan_limit=15,
+        post_existing=False,
+        data_dir=tmp_path,
+        cookies_file=None,
+        instagram_cookies_file=None,
+        youtube_cookies_file=None,
+        youtube_po_token_provider_url=None,
+        web_host="127.0.0.1",
+        web_port=8080,
+        web_username=None,
+        web_password=None,
+    )
+    service = TikTokToTelegram(config)
+    requested: list[str] = []
+
+    class Response:
+        headers = {"Content-Type": "image/jpeg"}
+        content = b"image"
+
+        def raise_for_status(self):
+            pass
+
+    class Session:
+        def get(self, url, timeout):
+            requested.append(url)
+            return Response()
+
+    monkeypatch.setattr(service, "_cookie_session", lambda cookies_file=None: Session())
+
+    paths = service._download_images(
+        [
+            "https://p16-common-sign.tiktokcdn-us.com/tos/same.jpeg?x=1",
+            "https://p19-common-sign.tiktokcdn-us.com/tos/same.jpeg?x=2",
+            "https://p16-common-sign.tiktokcdn-us.com/tos/other.jpeg?x=3",
+        ],
+        "post",
+        None,
+    )
+
+    assert len(paths) == 2
+    assert requested == [
+        "https://p16-common-sign.tiktokcdn-us.com/tos/same.jpeg?x=1",
+        "https://p16-common-sign.tiktokcdn-us.com/tos/other.jpeg?x=3",
+    ]
+
+
+def test_prepare_tiktok_photo_url_without_ytdlp(tmp_path, monkeypatch) -> None:
+    config = Config(
+        telegram_bot_token="token",
+        telegram_chat_id="@main",
+        tiktok_channels=(),
+        poll_interval_seconds=300,
+        scan_limit=15,
+        post_existing=False,
+        data_dir=tmp_path,
+        cookies_file=None,
+        instagram_cookies_file=None,
+        youtube_cookies_file=None,
+        youtube_po_token_provider_url=None,
+        web_host="127.0.0.1",
+        web_port=8080,
+        web_username=None,
+        web_password=None,
+    )
+    image_path = tmp_path / "image.jpg"
+    image_path.write_bytes(b"image")
+    service = TikTokToTelegram(config)
+
+    def fail_extract_info(*args, **kwargs):
+        raise AssertionError("yt-dlp must not be used for /photo/ URLs")
+
+    monkeypatch.setattr(service, "_extract_info", fail_extract_info)
+    monkeypatch.setattr(
+        service,
+        "_tiktok_image_post_urls",
+        lambda url, cookies_file: ["https://cdn.test/image.jpg"],
+    )
+    monkeypatch.setattr(
+        service,
+        "_download_images",
+        lambda urls, output_id, cookies_file: (image_path,),
+    )
+
+    video, paths = service.prepare_url(
+        "https://www.tiktok.com/@knopkot_tiktok/photo/7653583264212471048"
+    )
+
+    assert video.video_id == "7653583264212471048"
+    assert video.username == "knopkot_tiktok"
+    assert video.media_type == "image"
+    assert paths == (image_path,)
+
+
+def test_prepare_tiktok_photo_url_falls_back_to_tikwm(tmp_path, monkeypatch) -> None:
+    config = Config(
+        telegram_bot_token="token",
+        telegram_chat_id="@main",
+        tiktok_channels=(),
+        poll_interval_seconds=300,
+        scan_limit=15,
+        post_existing=False,
+        data_dir=tmp_path,
+        cookies_file=None,
+        instagram_cookies_file=None,
+        youtube_cookies_file=None,
+        youtube_po_token_provider_url=None,
+        web_host="127.0.0.1",
+        web_port=8080,
+        web_username=None,
+        web_password=None,
+    )
+    image_path = tmp_path / "image.jpg"
+    image_path.write_bytes(b"image")
+    service = TikTokToTelegram(config)
+
+    monkeypatch.setattr(service, "_tiktok_image_post_urls", lambda url, cookies_file: [])
+    monkeypatch.setattr(
+        service,
+        "_tikwm_image_post_info",
+        lambda url: (
+            {
+                "id": "7653587728289877255",
+                "description": "Forest",
+                "uploader": "knopkot_tiktok",
+                "webpage_url": url,
+            },
+            ["https://cdn.test/image.jpg"],
+        ),
+    )
+    monkeypatch.setattr(
+        service,
+        "_download_images",
+        lambda urls, output_id, cookies_file: (image_path,),
+    )
+
+    video, paths = service.prepare_url(
+        "https://www.tiktok.com/@knopkot_tiktok/photo/7653587728289877255"
+    )
+
+    assert video.video_id == "7653587728289877255"
+    assert video.username == "knopkot_tiktok"
+    assert video.description == "Forest"
+    assert video.media_type == "image"
+    assert paths == (image_path,)
+
+
 def test_service_updates_uploaded_cookies_without_restart(tmp_path) -> None:
     config = Config(
         telegram_bot_token="token",
@@ -300,7 +541,7 @@ def test_service_updates_uploaded_cookies_without_restart(tmp_path) -> None:
 
     path = service.update_cookies("instagram", b"# Netscape HTTP Cookie File\n")
 
-    assert path == tmp_path / "instagram-cookies.txt"
+    assert path == tmp_path / "users" / "1" / "instagram-cookies.txt"
     assert service.instagram_cookies_file == path
     assert path.read_bytes() == b"# Netscape HTTP Cookie File\n"
 

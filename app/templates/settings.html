@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block body_class %}settings-page{% endblock %}
+{% block brand %}<div class="brand-line"><div class="brand-title">ClipRelay</div><a class="header-action back-link" href="{{ url_for('index') }}" data-animated-nav>На главную</a></div>{% endblock %}
+{% block heading %}Настройки{% if admin_settings_mode %}: {{ settings_user.username }}{% endif %}{% endblock %}
+{% block lead %}Telegram-каналы, мониторинг и cookies.{% endblock %}
+{% block content %}
+<section class="card settings-page-card">
+  {% if admin_settings_mode %}<a class="secondary" href="{{ url_for('admin_user_detail', user_id=settings_user.id) }}" data-animated-nav>К правам пользователя</a>{% endif %}
+  {% if settings_error %}<div class="error settings-error">{{ settings_error }}</div>{% endif %}
+  {% if request.args.get("settings") %}<div class="settings-success">Настройки обновлены.</div>{% endif %}
+  <div class="settings-grid">
+    <details class="settings-section" open><summary>Telegram-каналы и чаты</summary>
+      <form action="{{ url_for('add_telegram_channel') }}" method="post" autocomplete="off">
+        {% if admin_settings_mode %}<input type="hidden" name="settings_user_id" value="{{ settings_user.id }}">{% endif %}
+        <div class="discover-box"><label for="discover_bot_token">Токен бота для поиска</label><input id="discover_bot_token" class="secret-input" form="discover-telegram-form" name="bot_token" type="text" autocomplete="off" data-lpignore="true" data-1p-ignore="true" spellcheck="false" placeholder="123456789:bot_token" required><button class="secondary" form="discover-telegram-form" type="submit">Найти каналы и чаты</button></div>
+        <p class="settings-divider">или добавить вручную</p>
+        <label for="telegram_name">Название</label><input id="telegram_name" name="name" autocomplete="off" placeholder="Рабочий чат" required>
+        <label for="telegram_chat_id">Тег или ID</label><input id="telegram_chat_id" name="chat_id" autocomplete="off" placeholder="@channel или отрицательный ID" required>
+        <label for="telegram_bot_token">Токен бота</label><input id="telegram_bot_token" class="secret-input" name="bot_token" type="text" autocomplete="off" data-lpignore="true" data-1p-ignore="true" spellcheck="false" placeholder="123456789:bot_token" required>
+        <button type="submit">Добавить</button>
+      </form>
+      <form id="discover-telegram-form" action="{{ url_for('discover_telegram_channels') }}" method="post" autocomplete="off">{% if admin_settings_mode %}<input type="hidden" name="settings_user_id" value="{{ settings_user.id }}">{% endif %}</form>
+      <div class="saved-channels"><h3>Порядок и удаление</h3><input type="search" autocomplete="off" placeholder="Поиск по названию или тегу" data-settings-channel-search><div class="saved-channel-list" data-settings-channel-list>
+        {% for channel in telegram_channels %}<div class="saved-channel" data-settings-channel data-channel-id="{{ channel.chat_id }}" data-channel-search-value="{{ channel.name }} {{ channel.chat_id }}"><span><strong>{{ channel.name }}</strong><small>{% if channel.chat_id.startswith('@') %}{{ channel.chat_id }} · {% endif %}{{ "чат" if channel.destination_type in ("group", "supergroup") else "канал" }}</small></span><div class="channel-controls"><form action="{{ url_for('move_telegram_channel') }}" method="post">{% if admin_settings_mode %}<input type="hidden" name="settings_user_id" value="{{ settings_user.id }}">{% endif %}<input type="hidden" name="chat_id" value="{{ channel.chat_id }}"><button class="channel-order secondary" name="direction" value="up" aria-label="Поднять"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5l6 7h-4v7h-4v-7H6l6-7z"/></svg></button><button class="channel-order secondary" name="direction" value="down" aria-label="Опустить"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19l-6-7h4V5h4v7h4l-6 7z"/></svg></button></form><form action="{{ url_for('delete_telegram_channel') }}" method="post">{% if admin_settings_mode %}<input type="hidden" name="settings_user_id" value="{{ settings_user.id }}">{% endif %}<input type="hidden" name="chat_id" value="{{ channel.chat_id }}"><button class="channel-delete secondary" type="submit" aria-label="Удалить {{ channel.name }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.8 6.4 12 10.6l4.2-4.2 1.4 1.4-4.2 4.2 4.2 4.2-1.4 1.4-4.2-4.2-4.2 4.2-1.4-1.4 4.2-4.2-4.2-4.2 1.4-1.4z"/></svg></button></form></div></div>{% endfor %}
+      </div></div>
+    </details>
+    {% if service_permissions.tiktok %}
+    <details class="settings-section"><summary>Мониторинг TikTok</summary>
+      <form action="{{ url_for('add_monitored_tiktok_channel') }}" method="post" autocomplete="off">{% if admin_settings_mode %}<input type="hidden" name="settings_user_id" value="{{ settings_user.id }}">{% endif %}<label for="monitor_channel">Канал</label><input id="monitor_channel" name="channel" autocomplete="off" placeholder="@username или ссылка" required><button type="submit">Добавить канал</button></form>
+      <form action="{{ url_for('update_tiktok_interval') }}" method="post">{% if admin_settings_mode %}<input type="hidden" name="settings_user_id" value="{{ settings_user.id }}">{% endif %}<label for="poll_interval_seconds">Интервал проверки, секунд</label><input id="poll_interval_seconds" name="poll_interval_seconds" type="number" min="30" value="{{ poll_interval_seconds }}" required><button class="secondary" type="submit">Сохранить интервал</button></form>
+      <div class="saved-channel-list">{% for channel in monitored_tiktok_channels %}<div class="saved-channel"><span><strong>@{{ channel }}</strong></span><form action="{{ url_for('delete_monitored_tiktok_channel') }}" method="post">{% if admin_settings_mode %}<input type="hidden" name="settings_user_id" value="{{ settings_user.id }}">{% endif %}<input type="hidden" name="channel" value="{{ channel }}"><button class="channel-delete secondary" type="submit" aria-label="Удалить @{{ channel }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.8 6.4 12 10.6l4.2-4.2 1.4 1.4-4.2 4.2 4.2 4.2-1.4 1.4-4.2-4.2-4.2 4.2-1.4-1.4 4.2-4.2-4.2-4.2 1.4-1.4z"/></svg></button></form></div>{% else %}<p class="hint">Постоянный мониторинг не настроен.</p>{% endfor %}</div>
+    </details>
+    {% endif %}
+    <details class="settings-section"><summary>Cookies</summary>
+      <p class="hint">Загрузите cookies.txt в Netscape-формате.</p>
+      {% if service_permissions.tiktok %}<form action="{{ url_for('update_cookies', service_name='tiktok') }}" method="post" enctype="multipart/form-data">{% if admin_settings_mode %}<input type="hidden" name="settings_user_id" value="{{ settings_user.id }}">{% endif %}<label for="tiktok_cookies">TikTok cookies</label><input id="tiktok_cookies" name="cookies_file" type="file" accept=".txt,text/plain" required><button class="secondary" type="submit">Обновить TikTok cookies</button></form>{% endif %}
+      {% if service_permissions.instagram %}<form action="{{ url_for('update_cookies', service_name='instagram') }}" method="post" enctype="multipart/form-data">{% if admin_settings_mode %}<input type="hidden" name="settings_user_id" value="{{ settings_user.id }}">{% endif %}<label for="instagram_cookies">Instagram cookies</label><input id="instagram_cookies" name="cookies_file" type="file" accept=".txt,text/plain" required><button class="secondary" type="submit">Обновить Instagram cookies</button></form>{% endif %}
+      {% if service_permissions.youtube %}<form action="{{ url_for('update_cookies', service_name='youtube') }}" method="post" enctype="multipart/form-data">{% if admin_settings_mode %}<input type="hidden" name="settings_user_id" value="{{ settings_user.id }}">{% endif %}<label for="youtube_cookies">YouTube cookies</label><input id="youtube_cookies" name="cookies_file" type="file" accept=".txt,text/plain" required><button class="secondary" type="submit">Обновить YouTube cookies</button></form>{% endif %}
+    </details>
+  </div>
+</section>
+{% endblock %}

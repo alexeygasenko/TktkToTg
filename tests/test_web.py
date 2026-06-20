@@ -2,6 +2,7 @@ from io import BytesIO
 from pathlib import Path
 
 from app.config import Config, TelegramChannel
+from app.service import TikTokToTelegram
 from app.service import Video, YouTubeVideo
 from app.web import create_app
 
@@ -267,6 +268,11 @@ def test_home_has_post_builder_transition(tmp_path: Path) -> None:
     assert "async function runInlineScripts" in response.text
     assert 'fetch(targetUrl, { headers: { "X-Requested-With": "fetch" } })' in response.text
     assert 'data-channel-picker' in response.text
+    assert 'data-account-trigger' in response.text
+    assert "Telegram-каналы и чаты" not in response.text
+
+    response = client.get("/settings")
+    assert response.status_code == 200
     assert "Telegram-каналы и чаты" in response.text
     assert "Cookies" in response.text
     assert "Найти каналы и чаты" in response.text
@@ -391,3 +397,88 @@ def test_youtube_post_can_be_prepared_and_sent(tmp_path: Path) -> None:
     assert response.status_code == 302
     assert service.published_youtube[1:4] == ("До", "После", "@second")
     assert service.published_youtube[4] == '<a href="https://youtube.com/watch?v=abc">Ссылка</a>'
+
+
+def test_admin_password_setup_registration_and_service_permissions(tmp_path: Path) -> None:
+    config = make_config(tmp_path)
+    service = TikTokToTelegram(config)
+    client = create_app(config, service).test_client()
+
+    response = client.get("/")
+    assert response.status_code == 302
+    assert "/login" in response.headers["Location"]
+    response = client.get("/login")
+    assert response.status_code == 302
+    assert "/setup-admin" in response.headers["Location"]
+
+    response = client.post(
+        "/setup-admin",
+        data={"password": "admin-password", "confirm_password": "admin-password"},
+    )
+    assert response.status_code == 302
+    assert service.storage.get_user(1).username == "boyd"
+    assert not service.storage.get_user(1).must_set_password
+
+    client.post("/logout")
+    response = client.post(
+        "/register",
+        data={
+            "username": "alice",
+            "password": "alice-password",
+            "confirm_password": "alice-password",
+        },
+    )
+    assert response.status_code == 302
+    alice = service.storage.get_user_by_username("alice")
+    assert alice is not None
+
+    client.post("/logout")
+    assert client.post(
+        "/login", data={"username": "boyd", "password": "admin-password"}
+    ).status_code == 302
+    response = client.get("/admin/users")
+    assert response.status_code == 200
+    assert "alice" in response.text
+    assert "На главную" in response.text
+    assert "Отключить" in response.text
+
+    response = client.post(f"/admin/users/{alice.id}/toggle-disabled")
+    assert response.status_code == 302
+    assert service.storage.get_user(alice.id).is_disabled
+
+    response = client.post(f"/admin/users/{alice.id}/toggle-disabled")
+    assert response.status_code == 302
+    assert not service.storage.get_user(alice.id).is_disabled
+
+    response = client.get("/")
+    assert response.status_code == 200
+    assert 'href="/admin/users"' in response.text
+    assert 'href="/settings"' in response.text
+
+    response = client.post(
+        f"/admin/users/{alice.id}",
+        data={
+            "username": "alice",
+            "allow_tiktok": "on",
+            "allow_instagram": "on",
+        },
+    )
+    assert response.status_code == 302
+    assert not service.storage.get_user(alice.id).allow_youtube
+
+    client.post("/logout")
+    assert client.post(
+        "/login", data={"username": "alice", "password": "alice-password"}
+    ).status_code == 302
+    response = client.get("/")
+    assert response.status_code == 200
+    assert 'data-source-tab="youtube"' not in response.text
+    assert "YouTube cookies" not in response.text
+
+    response = client.post(
+        "/settings/cookies/youtube",
+        data={"cookies_file": (BytesIO(b"# Netscape HTTP Cookie File\n"), "cookies.txt")},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 400
+    assert not (tmp_path / "users" / str(alice.id) / "youtube-cookies.txt").exists()

@@ -11,6 +11,24 @@
   <div class="ambient ambient-one"></div>
   <div class="ambient ambient-two"></div>
   <div class="ambient ambient-three"></div>
+  {% if g.current_user is defined and g.current_user %}
+  <nav class="account-nav" data-account-menu>
+    <button class="menu-trigger" type="button" data-account-trigger aria-label="Открыть меню">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+  <div class="side-menu-overlay" data-account-close hidden></div>
+  <aside class="side-menu" data-account-panel aria-label="Меню" hidden>
+    <div class="side-menu-heading">
+      <strong>{{ g.current_user.username }}</strong>
+    </div>
+    <nav class="side-menu-links">
+      {% if g.current_user.is_admin %}<a href="{{ url_for('admin_users') }}" data-animated-nav>Админка</a>{% endif %}
+      <a href="{{ url_for('settings') }}" data-animated-nav>Настройки</a>
+      <form action="{{ url_for('logout') }}" method="post"><button type="submit">Выйти</button></form>
+    </nav>
+  </aside>
+  {% endif %}
   <main class="shell">
     <header>
       {% block eyebrow %}{% endblock %}
@@ -22,6 +40,48 @@
     {% block content %}{% endblock %}
   </main>
   <script>
+    function setSideMenuOpen(open) {
+      const panel = document.querySelector("[data-account-panel]");
+      const overlay = document.querySelector("[data-account-close].side-menu-overlay");
+      if (!panel || !overlay) return;
+      if (open) {
+        panel.hidden = false;
+        overlay.hidden = false;
+        requestAnimationFrame(() => document.body.classList.add("side-menu-open"));
+        return;
+      }
+      document.body.classList.remove("side-menu-open");
+      panel.setAttribute("aria-hidden", "true");
+      if (!open) {
+        window.setTimeout(() => {
+          panel.hidden = true;
+          overlay.hidden = true;
+          panel.removeAttribute("aria-hidden");
+        }, 260);
+      }
+    }
+    document.addEventListener("click", (event) => {
+      if (event.target.closest("[data-account-trigger]")) {
+        setSideMenuOpen(!document.body.classList.contains("side-menu-open"));
+        return;
+      }
+      if (event.target.closest("[data-account-close]")) {
+        setSideMenuOpen(false);
+      }
+    });
+    document.addEventListener("click", (event) => {
+      const link = event.target.closest("[data-animated-nav]");
+      if (!link || !link.href) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+      event.preventDefault();
+      setSideMenuOpen(false);
+      document.body.classList.add("scene-transitioning");
+      document.querySelector("main.shell")?.classList.add("page-exit-forward");
+      window.setTimeout(() => { window.location.href = link.href; }, 420);
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") setSideMenuOpen(false);
+    });
     document.addEventListener("click", (event) => {
       const option = event.target.closest("[data-channel-value]");
       const picker = event.target.closest("[data-channel-picker]");

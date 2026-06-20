@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block body_class %}admin-page{% endblock %}
+{% block brand %}<div class="brand-line"><div class="brand-title">ClipRelay</div><a class="header-action back-link" href="{{ url_for('index') }}" data-animated-nav>На главную</a></div>{% endblock %}
+{% block heading %}{{ user.username }}{% endblock %}
+{% block lead %}Права пользователя и доступ к сервисам.{% endblock %}
+{% block content %}
+<section class="card admin-card">
+  {% if request.args.get("saved") %}<div class="settings-success">Пользователь обновлён.</div>{% endif %}
+  <form action="{{ url_for('admin_user_update', user_id=user.id) }}" method="post" autocomplete="off">
+    <label for="username">Логин</label>
+    <input id="username" name="username" value="{{ user.username }}" required>
+    <label class="check-row"><input type="checkbox" name="is_admin" {% if user.is_admin %}checked{% endif %} {% if user.id == 1 %}disabled{% endif %}><span><strong>Администратор</strong><small>Может управлять пользователями и их настройками.</small></span></label>
+    <label class="check-row"><input type="checkbox" name="is_disabled" {% if user.is_disabled %}checked{% endif %}><span><strong>Отключить пользователя</strong><small>Вход и публикации будут заблокированы.</small></span></label>
+    <label class="check-row"><input type="checkbox" name="allow_tiktok" {% if user.allow_tiktok %}checked{% endif %}><span><strong>TikTok</strong><small>Загрузка видео, импорт каналов, мониторинг и cookies.</small></span></label>
+    <label class="check-row"><input type="checkbox" name="allow_instagram" {% if user.allow_instagram %}checked{% endif %}><span><strong>Instagram</strong><small>Загрузка видео и cookies.</small></span></label>
+    <label class="check-row"><input type="checkbox" name="allow_youtube" {% if user.allow_youtube %}checked{% endif %}><span><strong>YouTube</strong><small>Получение превью, скачивание видео, посты и cookies.</small></span></label>
+    <div class="actions">
+      <button type="submit">Сохранить права</button>
+      <a class="secondary" href="{{ url_for('admin_user_settings', user_id=user.id) }}" data-animated-nav>Настройки пользователя</a>
+      <a class="secondary" href="{{ url_for('admin_users') }}" data-animated-nav>К списку</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

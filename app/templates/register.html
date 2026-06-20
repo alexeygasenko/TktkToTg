@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block body_class %}auth-page{% endblock %}
+{% block heading %}Регистрация{% endblock %}
+{% block lead %}Создайте отдельный аккаунт для своих Telegram-настроек.{% endblock %}
+{% block content %}
+<section class="card auth-card">
+  <form action="{{ url_for('register') }}" method="post" autocomplete="off">
+    <label for="username">Логин</label>
+    <input id="username" name="username" autocomplete="username" required autofocus>
+    <label for="password">Пароль</label>
+    <input id="password" name="password" type="password" autocomplete="new-password" required>
+    <label for="confirm_password">Повторите пароль</label>
+    <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" required>
+    <button type="submit">Создать аккаунт</button>
+  </form>
+  <p class="hint"><a href="{{ url_for('login') }}" data-animated-nav>Уже есть аккаунт</a></p>
+</section>
+{% endblock %}

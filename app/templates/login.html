@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block body_class %}auth-page{% endblock %}
+{% block heading %}Вход{% endblock %}
+{% block lead %}Введите логин и пароль ClipRelay.{% endblock %}
+{% block content %}
+<section class="card auth-card">
+  <form action="{{ url_for('login_post') }}" method="post" autocomplete="off">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label for="username">Логин</label>
+    <input id="username" name="username" autocomplete="username" required autofocus>
+    <label for="password">Пароль</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+    <button type="submit">Войти</button>
+  </form>
+  <p class="hint"><a href="{{ url_for('register') }}" data-animated-nav>Зарегистрироваться</a></p>
+</section>
+{% endblock %}

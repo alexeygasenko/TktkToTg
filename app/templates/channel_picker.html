@@ -1,4 +1,15 @@
 {% macro channel_picker(id, channels, selected_chat_id="") %}
+{% if not channels %}
+<div class="channel-picker empty">
+  <input type="hidden" name="chat_id" value="" autocomplete="off">
+  <button id="{{ id }}" class="channel-picker-trigger" type="button" disabled>
+    <span class="channel-picker-value">
+      <span data-channel-label>Канал не настроен</span>
+      <small data-channel-tag>Добавьте Telegram-канал в настройках</small>
+    </span>
+  </button>
+</div>
+{% else %}
 {% set selected = namespace(channel=channels[0]) %}
 {% for channel in channels %}
   {% if channel.chat_id == selected_chat_id %}
@@ -31,4 +42,5 @@
     {% endfor %}
   </div>
 </div>
+{% endif %}
 {% endmacro %}

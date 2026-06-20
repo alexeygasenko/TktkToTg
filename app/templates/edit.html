@@ -8,7 +8,15 @@
 {% block lead %}Соберите подпись перед отправкой и выберите, какие части оставить.{% endblock %}
 {% block content %}
 <section class="editor">
+  {% if job.video.media_type == "image" %}
+  <div class="image-preview-grid">
+    {% for _path in job.paths %}
+    <img src="{{ url_for('preview_item', job_id=job.job_id, item_index=loop.index0) }}" alt="Изображение {{ loop.index }}">
+    {% endfor %}
+  </div>
+  {% else %}
   <video controls preload="metadata" src="{{ url_for('preview', job_id=job.job_id) }}"></video>
+  {% endif %}
   <form class="card" action="{{ url_for('send', job_id=job.job_id) }}" method="post" autocomplete="off">
     <div class="author">
       Автор:

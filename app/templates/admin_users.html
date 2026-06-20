@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block body_class %}admin-page{% endblock %}
+{% block brand %}<div class="brand-line"><div class="brand-title">ClipRelay</div><a class="header-action back-link" href="{{ url_for('index') }}" data-animated-nav>На главную</a></div>{% endblock %}
+{% block heading %}Пользователи{% endblock %}
+{% block lead %}Аккаунты, права и доступы к сервисам.{% endblock %}
+{% block content %}
+<section class="card admin-card">
+  <div class="admin-list">
+    {% for user in users %}
+    <div class="admin-user-row {% if user.is_disabled %}disabled{% endif %}">
+      <a class="admin-user-main" href="{{ url_for('admin_user_detail', user_id=user.id) }}" data-animated-nav>
+        <span><strong>{{ user.username }}</strong><small>#{{ user.id }}{% if user.is_admin %} · admin{% endif %}{% if user.is_disabled %} · disabled{% endif %}</small></span>
+      </a>
+      <span class="service-badges">
+        {% if user.allow_tiktok %}<small>TikTok</small>{% endif %}
+        {% if user.allow_instagram %}<small>Instagram</small>{% endif %}
+        {% if user.allow_youtube %}<small>YouTube</small>{% endif %}
+      </span>
+      <form action="{{ url_for('admin_user_toggle_disabled', user_id=user.id, page=page) }}" method="post">
+        <button class="secondary user-toggle" type="submit" {% if user.id == g.current_user.id %}disabled{% endif %}>{{ "Включить" if user.is_disabled else "Отключить" }}</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="pagination">
+    {% if page > 1 %}<a class="secondary" href="{{ url_for('admin_users', page=page - 1) }}" data-animated-nav>Назад</a>{% endif %}
+    <span>{{ page }} / {{ pages }} · {{ total }}</span>
+    {% if page < pages %}<a class="secondary" href="{{ url_for('admin_users', page=page + 1) }}" data-animated-nav>Дальше</a>{% endif %}
+  </div>
+</section>
+{% endblock %}

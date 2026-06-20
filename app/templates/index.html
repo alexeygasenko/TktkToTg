@@ -8,42 +8,50 @@
 <div class="source-carousel-shell" data-source-carousel-shell>
 <nav class="source-tabs" data-source-tabs aria-label="Источник видео">
   <div class="brand-title source-brand" aria-hidden="true">ClipRelay</div>
+  {% if service_permissions.tiktok %}
   <button class="source-tab" type="button" data-source-tab="tiktok" aria-label="Выбрать TikTok">
     <span class="source-logo tiktok-logo" aria-hidden="true">
       <svg viewBox="0 0 24 24"><path d="M14.4 3c.4 3 2.1 4.8 5 5v3.3a8.5 8.5 0 0 1-5-1.6v6.4c0 3.2-2.2 5.6-5.5 5.6-3 0-5.2-2-5.2-4.8 0-3.1 2.5-5 5.8-4.7v3.3c-1.4-.3-2.4.3-2.4 1.4 0 .9.7 1.5 1.8 1.5 1.2 0 2-.8 2-2.4V3h3.5z"/></svg>
     </span>
     TikTok
   </button>
+  {% endif %}
+  {% if service_permissions.instagram %}
   <button class="source-tab" type="button" data-source-tab="instagram" aria-label="Выбрать Instagram">
     <span class="source-logo instagram-logo" aria-hidden="true">
       <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="5"/><circle cx="12" cy="12" r="3.6"/><circle cx="16.8" cy="7.2" r="1"/></svg>
     </span>
     Instagram
   </button>
+  {% endif %}
+  {% if service_permissions.youtube %}
   <button class="source-tab" type="button" data-source-tab="youtube" aria-label="Выбрать YouTube">
     <span class="source-logo youtube-logo" aria-hidden="true">
       <svg viewBox="0 0 24 24"><path d="M21 8.2a3 3 0 0 0-2.1-2.1C17 5.6 12 5.6 12 5.6s-5 0-6.9.5A3 3 0 0 0 3 8.2 31 31 0 0 0 2.5 12a31 31 0 0 0 .5 3.8 3 3 0 0 0 2.1 2.1c1.9.5 6.9.5 6.9.5s5 0 6.9-.5a3 3 0 0 0 2.1-2.1c.4-1.4.5-3.8.5-3.8s0-2.4-.5-3.8z"/><path class="youtube-play" d="m10.2 15.2 5-3.2-5-3.2v6.4z"/></svg>
     </span>
     YouTube
   </button>
+  {% endif %}
 </nav>
 </div>
 
 <div class="source-panel-carousel" data-source-panel-carousel hidden>
+{% if service_permissions.tiktok %}
 <section class="card service-card source-panel" data-source-panel="tiktok" hidden>
-  <div class="service-heading"><span class="service-mark tiktok-mark">TT</span><div><h2>TikTok</h2><p>Скачивание видео, публикация и импорт канала</p></div></div>
+  <div class="service-heading"><span class="service-mark tiktok-mark">TT</span><div><h2>TikTok</h2><p>Скачивание постов, публикация и импорт канала</p></div></div>
   <div class="mode-tabs">
-    <button class="mode-tab active" type="button" data-tiktok-mode="video">Отдельное видео</button>
+    <button class="mode-tab active" type="button" data-tiktok-mode="video">Отдельный пост</button>
     <button class="mode-tab" type="button" data-tiktok-mode="channel">Импорт канала</button>
   </div>
   <div data-tiktok-panel="video">
-    <label for="tiktok_video_url">Ссылка на TikTok-видео</label>
-    <input id="tiktok_video_url" type="url" autocomplete="off" placeholder="Вставьте ссылку на видео">
+    <label for="tiktok_video_url">Ссылка на TikTok-пост</label>
+    <input id="tiktok_video_url" type="url" autocomplete="off" placeholder="Вставьте ссылку на видео или коллаж">
     <label>Telegram-канал или чат</label>
     {{ channel_picker("tiktok_chat_id", telegram_channels) }}
-    <div class="media-status hint" data-media-status="tiktok">Вставьте ссылку, чтобы подготовить видео.</div>
+    <div class="media-status hint" data-media-status="tiktok">Вставьте ссылку, чтобы подготовить видео или коллаж.</div>
     <article class="media-result" data-media-result="tiktok" hidden>
       <video controls playsinline data-media-preview></video>
+      <img class="media-image-preview" data-media-image-preview alt="Превью TikTok-коллажа" hidden>
       <div><h3 data-media-author></h3><p data-media-description></p><div class="download-actions"><a class="secondary" data-media-download>Скачать видео</a><a class="button" data-media-post>Подготовить пост</a></div></div>
     </article>
   </div>
@@ -56,7 +64,9 @@
     <button type="submit">Импортировать канал</button>
   </form>
 </section>
+{% endif %}
 
+{% if service_permissions.instagram %}
 <section class="card service-card source-panel" data-source-panel="instagram" hidden>
   <div class="service-heading"><span class="service-mark instagram-mark">IG</span><div><h2>Instagram</h2><p>Скачивание ролика и подготовка поста</p></div></div>
   <label for="instagram_url">Ссылка на Instagram-видео</label>
@@ -66,10 +76,13 @@
   <div class="media-status hint" data-media-status="instagram">Вставьте ссылку, чтобы подготовить видео.</div>
   <article class="media-result" data-media-result="instagram" hidden>
     <video controls playsinline data-media-preview></video>
+    <img class="media-image-preview" data-media-image-preview alt="Превью Instagram" hidden>
     <div><h3 data-media-author></h3><p data-media-description></p><div class="download-actions"><a class="secondary" data-media-download>Скачать видео</a><a class="button" data-media-post>Подготовить пост</a></div></div>
   </article>
 </section>
+{% endif %}
 
+{% if service_permissions.youtube %}
 <section class="card service-card source-panel youtube-card" data-source-panel="youtube" hidden>
   <div class="service-heading"><span class="service-mark youtube-mark">YT</span><div><h2>YouTube</h2><p>Видео, превью и Telegram-посты</p></div></div>
   <label for="youtube_url">Ссылка на YouTube-видео</label>
@@ -79,52 +92,12 @@
     <img id="youtube-thumbnail" alt="Превью YouTube-видео"><div class="youtube-meta"><h3 id="youtube-title"></h3><p id="youtube-channel"></p><div class="download-actions"><a id="youtube-thumbnail-download" class="secondary">Скачать превью</a><a id="youtube-video-download" class="secondary">Скачать видео</a><a id="youtube-post" class="button">Подготовить пост</a></div></div>
   </article>
 </section>
+{% endif %}
 </div>
-
-<button class="settings-toggle" type="button" data-settings-open aria-label="Открыть настройки"><span></span><span></span><span></span></button>
-<div class="settings-overlay" data-settings-close></div>
-<aside class="settings-drawer {% if settings_open or request.args.get('settings') %}open{% endif %}" aria-label="Настройки">
-  <div class="settings-drawer-heading"><div class="settings-title">Настройки</div></div>
-  {% if settings_error %}<div class="error settings-error">{{ settings_error }}</div>{% endif %}
-  {% if request.args.get("settings") %}<div class="settings-success">Настройки обновлены.</div>{% endif %}
-  <div class="settings-grid">
-    <details class="settings-section" open><summary>Telegram-каналы и чаты</summary>
-      <form action="{{ url_for('add_telegram_channel') }}" method="post" autocomplete="off">
-        <div class="discover-box"><label for="discover_bot_token">Токен бота для поиска</label><input id="discover_bot_token" class="secret-input" form="discover-telegram-form" name="bot_token" type="text" autocomplete="off" data-lpignore="true" data-1p-ignore="true" spellcheck="false" placeholder="123456789:bot_token" required><button class="secondary" form="discover-telegram-form" type="submit">Найти каналы и чаты</button></div>
-        <p class="settings-divider">или добавить вручную</p>
-        <label for="telegram_name">Название</label><input id="telegram_name" name="name" autocomplete="off" placeholder="Рабочий чат" required>
-        <label for="telegram_chat_id">Тег или ID</label><input id="telegram_chat_id" name="chat_id" autocomplete="off" placeholder="@channel или отрицательный ID" required>
-        <label for="telegram_bot_token">Токен бота</label><input id="telegram_bot_token" class="secret-input" name="bot_token" type="text" autocomplete="off" data-lpignore="true" data-1p-ignore="true" spellcheck="false" placeholder="123456789:bot_token" required>
-        <button type="submit">Добавить</button>
-      </form>
-      <form id="discover-telegram-form" action="{{ url_for('discover_telegram_channels') }}" method="post" autocomplete="off"></form>
-      <div class="saved-channels"><h3>Порядок и удаление</h3><input type="search" autocomplete="off" placeholder="Поиск по названию или тегу" data-settings-channel-search><div class="saved-channel-list" data-settings-channel-list>
-        {% for channel in telegram_channels %}<div class="saved-channel" data-settings-channel data-channel-id="{{ channel.chat_id }}" data-channel-search-value="{{ channel.name }} {{ channel.chat_id }}"><span><strong>{{ channel.name }}</strong><small>{% if channel.chat_id.startswith('@') %}{{ channel.chat_id }} · {% endif %}{{ "чат" if channel.destination_type in ("group", "supergroup") else "канал" }}</small></span><div class="channel-controls"><form action="{{ url_for('move_telegram_channel') }}" method="post" data-channel-move-form><input type="hidden" name="chat_id" value="{{ channel.chat_id }}"><button class="channel-order secondary" name="direction" value="up" aria-label="Поднять"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5l6 7h-4v7h-4v-7H6l6-7z"/></svg></button><button class="channel-order secondary" name="direction" value="down" aria-label="Опустить"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19l-6-7h4V5h4v7h4l-6 7z"/></svg></button></form><form action="{{ url_for('delete_telegram_channel') }}" method="post"><input type="hidden" name="chat_id" value="{{ channel.chat_id }}"><button class="channel-delete secondary" type="submit" aria-label="Удалить {{ channel.name }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.8 6.4 12 10.6l4.2-4.2 1.4 1.4-4.2 4.2 4.2 4.2-1.4 1.4-4.2-4.2-4.2 4.2-1.4-1.4 4.2-4.2-4.2-4.2 1.4-1.4z"/></svg></button></form></div></div>{% endfor %}
-      </div></div>
-    </details>
-    <details class="settings-section"><summary>Мониторинг TikTok</summary>
-      <form action="{{ url_for('add_monitored_tiktok_channel') }}" method="post" autocomplete="off"><label for="monitor_channel">Канал</label><input id="monitor_channel" name="channel" autocomplete="off" placeholder="@username или ссылка" required><button type="submit">Добавить канал</button></form>
-      <form action="{{ url_for('update_tiktok_interval') }}" method="post"><label for="poll_interval_seconds">Интервал проверки, секунд</label><input id="poll_interval_seconds" name="poll_interval_seconds" type="number" min="30" value="{{ poll_interval_seconds }}" required><button class="secondary" type="submit">Сохранить интервал</button></form>
-      <div class="saved-channel-list">{% for channel in monitored_tiktok_channels %}<div class="saved-channel"><span><strong>@{{ channel }}</strong></span><form action="{{ url_for('delete_monitored_tiktok_channel') }}" method="post"><input type="hidden" name="channel" value="{{ channel }}"><button class="channel-delete secondary" type="submit" aria-label="Удалить @{{ channel }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.8 6.4 12 10.6l4.2-4.2 1.4 1.4-4.2 4.2 4.2 4.2-1.4 1.4-4.2-4.2-4.2 4.2-1.4-1.4 4.2-4.2-4.2-4.2 1.4-1.4z"/></svg></button></form></div>{% else %}<p class="hint">Постоянный мониторинг не настроен.</p>{% endfor %}</div>
-    </details>
-    <details class="settings-section"><summary>Cookies</summary>
-      <p class="hint">Загрузите cookies.txt в Netscape-формате.</p>
-      <form action="{{ url_for('update_cookies', service_name='tiktok') }}" method="post" enctype="multipart/form-data"><label for="tiktok_cookies">TikTok cookies</label><input id="tiktok_cookies" name="cookies_file" type="file" accept=".txt,text/plain" required><button class="secondary" type="submit">Обновить TikTok cookies</button></form>
-      <form action="{{ url_for('update_cookies', service_name='instagram') }}" method="post" enctype="multipart/form-data"><label for="instagram_cookies">Instagram cookies</label><input id="instagram_cookies" name="cookies_file" type="file" accept=".txt,text/plain" required><button class="secondary" type="submit">Обновить Instagram cookies</button></form>
-      <form action="{{ url_for('update_cookies', service_name='youtube') }}" method="post" enctype="multipart/form-data"><label for="youtube_cookies">YouTube cookies</label><input id="youtube_cookies" name="cookies_file" type="file" accept=".txt,text/plain" required><button class="secondary" type="submit">Обновить YouTube cookies</button></form>
-    </details>
-  </div>
-</aside>
 
 <div id="page-transition" class="page-transition" aria-live="polite" hidden><div class="transition-orb"><span></span><span></span><span></span></div><strong>Подготавливаем публикацию</strong><p>Загружаем видео и открываем конструктор подписи</p></div>
 <script>
-  const settingsDrawer = document.querySelector(".settings-drawer");
-  function setSettingsOpen(open) { settingsDrawer.classList.toggle("open", open); document.body.classList.toggle("settings-open", open); }
-  document.querySelector("[data-settings-open]").addEventListener("click", () => setSettingsOpen(!settingsDrawer.classList.contains("open")));
-  document.querySelectorAll("[data-settings-close]").forEach(item => item.addEventListener("click", () => setSettingsOpen(false)));
-  setSettingsOpen(settingsDrawer.classList.contains("open"));
-
-  const sourceOrder = ["tiktok", "instagram", "youtube"];
+  const sourceOrder = [{% if service_permissions.tiktok %}"tiktok"{% endif %}{% if service_permissions.tiktok and (service_permissions.instagram or service_permissions.youtube) %}, {% endif %}{% if service_permissions.instagram %}"instagram"{% endif %}{% if service_permissions.instagram and service_permissions.youtube %}, {% endif %}{% if service_permissions.youtube %}"youtube"{% endif %}];
   let activeSourceIndex = null;
   let homeSceneMain = null;
   let homeSceneUrl = null;
@@ -411,20 +384,27 @@
     const result = document.querySelector(`[data-media-result="${source}"]`);
     const status = document.querySelector(`[data-media-status="${source}"]`);
     if (!input.value.trim()) { result.hidden = true; result.classList.remove("revealing"); status.textContent = "Вставьте ссылку, чтобы подготовить видео."; return; }
-    status.textContent = "Загружаю видео…"; result.hidden = true; result.classList.remove("revealing");
+    status.textContent = "Загружаю медиа…"; result.hidden = true; result.classList.remove("revealing");
     const picker = input.closest(".source-panel").querySelector("[data-channel-picker] input[type=hidden]");
     try {
       const response = await fetch("{{ url_for('media_info') }}", {method: "POST", body: new URLSearchParams({media_url: input.value.trim(), chat_id: picker.value})});
       const data = await response.json(); if (!response.ok) throw new Error(data.error || "Не удалось обработать ссылку");
-      result.querySelector("[data-media-preview]").src = data.preview_url; result.querySelector("[data-media-author]").textContent = data.author; result.querySelector("[data-media-description]").textContent = data.description;
-      result.querySelector("[data-media-download]").href = data.video_download_url; result.querySelector("[data-media-post]").href = data.post_url; status.textContent = ""; revealResult(result);
+      const videoPreview = result.querySelector("[data-media-preview]");
+      const imagePreview = result.querySelector("[data-media-image-preview]");
+      const isImage = data.media_type === "image";
+      videoPreview.hidden = isImage; imagePreview.hidden = !isImage;
+      if (isImage) { videoPreview.removeAttribute("src"); imagePreview.src = data.preview_url; } else { imagePreview.removeAttribute("src"); videoPreview.src = data.preview_url; }
+      result.querySelector("[data-media-author]").textContent = data.author; result.querySelector("[data-media-description]").textContent = data.description;
+      const downloadLink = result.querySelector("[data-media-download]");
+      downloadLink.href = data.video_download_url; downloadLink.textContent = isImage ? `Скачать изображения (${data.image_count})` : "Скачать видео";
+      result.querySelector("[data-media-post]").href = data.post_url; status.textContent = ""; revealResult(result);
     } catch (error) { status.textContent = error.message; }
   }
-  ["tiktok", "instagram"].forEach(source => { const input = document.getElementById(source === "tiktok" ? "tiktok_video_url" : "instagram_url"); input.addEventListener("input", () => { clearTimeout(timers[source]); timers[source] = setTimeout(() => inspectMedia(source), 600); }); input.addEventListener("paste", () => { clearTimeout(timers[source]); timers[source] = setTimeout(() => inspectMedia(source), 50); }); });
+  ["tiktok", "instagram"].forEach(source => { const input = document.getElementById(source === "tiktok" ? "tiktok_video_url" : "instagram_url"); if (!input) return; input.addEventListener("input", () => { clearTimeout(timers[source]); timers[source] = setTimeout(() => inspectMedia(source), 600); }); input.addEventListener("paste", () => { clearTimeout(timers[source]); timers[source] = setTimeout(() => inspectMedia(source), 50); }); });
 
   const youtubeInput = document.getElementById("youtube_url"); let youtubeTimer;
   async function inspectYouTube() { const url = youtubeInput.value.trim(), status = document.getElementById("youtube-status"), result = document.getElementById("youtube-result"); if (!url) { result.hidden = true; result.classList.remove("revealing"); return; } status.textContent = "Получаю информацию о видео…"; result.hidden = true; result.classList.remove("revealing"); try { const response = await fetch("{{ url_for('youtube_info') }}", {method:"POST", body:new URLSearchParams({youtube_url:url})}); const data = await response.json(); if (!response.ok) throw new Error(data.error); document.getElementById("youtube-thumbnail").src=data.thumbnail_url; document.getElementById("youtube-title").textContent=data.title; document.getElementById("youtube-channel").textContent=data.channel; document.getElementById("youtube-thumbnail-download").href=data.thumbnail_download_url; document.getElementById("youtube-video-download").href=data.video_download_url; document.getElementById("youtube-post").href=data.post_url; status.textContent=""; revealResult(result); } catch(error) { status.textContent=error.message; } }
-  youtubeInput.addEventListener("input", () => { clearTimeout(youtubeTimer); youtubeTimer=setTimeout(inspectYouTube,600); }); youtubeInput.addEventListener("paste", () => { clearTimeout(youtubeTimer); youtubeTimer=setTimeout(inspectYouTube,50); });
+  if (youtubeInput) { youtubeInput.addEventListener("input", () => { clearTimeout(youtubeTimer); youtubeTimer=setTimeout(inspectYouTube,600); }); youtubeInput.addEventListener("paste", () => { clearTimeout(youtubeTimer); youtubeTimer=setTimeout(inspectYouTube,50); }); }
   document.addEventListener("click", event => {
     const postLink = event.target.closest("[data-media-post], #youtube-post");
     if (!postLink || !postLink.getAttribute("href")) return;
@@ -504,6 +484,6 @@
       window.setTimeout(() => list.classList.remove("reordering"), 340);
     }
   }));
-  document.getElementById("tiktok-channel-form").addEventListener("submit", event => { if (!event.currentTarget.checkValidity()) return; showPageTransition(); });
+  document.getElementById("tiktok-channel-form")?.addEventListener("submit", event => { if (!event.currentTarget.checkValidity()) return; showPageTransition(); });
 </script>
 {% endblock %}

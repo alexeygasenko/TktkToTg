@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block body_class %}auth-page{% endblock %}
+{% block heading %}Пароль администратора{% endblock %}
+{% block lead %}Аккаунт `boyd` уже создан. Установите пароль для первого входа.{% endblock %}
+{% block content %}
+<section class="card auth-card">
+  <form action="{{ url_for('setup_admin_password') }}" method="post" autocomplete="off">
+    <label for="password">Новый пароль</label>
+    <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required autofocus>
+    <label for="confirm_password">Повторите пароль</label>
+    <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" minlength="8" required>
+    <button type="submit">Сохранить пароль</button>
+  </form>
+</section>
+{% endblock %}

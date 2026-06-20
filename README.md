@@ -12,9 +12,10 @@ Docker service for relaying social video posts to Telegram.
 ## Setup
 
 Initial settings are stored in the local `config.yaml`. On first startup, the
-Telegram token and channel list are imported into `data/state.sqlite3`. After
-that, additional Telegram channels, bot tokens, and updated cookies can be added
-from the web interface.
+Telegram token and channel list are imported into `data/state.sqlite3` for the
+administrator account `boyd`. The first time you open the web interface, set the
+password for `boyd`. After that, users can sign in with a username and password
+or create their own account from the registration page.
 
 ```bash
 cp config.example.yaml config.yaml
@@ -47,7 +48,8 @@ Instagram, paste a video, reel, or post link. For YouTube, paste a video link:
 the thumbnail preview appears automatically, followed by buttons for downloading
 the video, downloading the thumbnail, and preparing the Telegram post.
 
-In the "Telegram settings and cookies" section, you can:
+Each user has separate Telegram destinations, TikTok monitoring settings, and
+cookies. In the "Telegram settings and cookies" section, you can:
 
 - add a public channel by `@handle` or a private channel by numeric ID such as
   `-1001234567890`, with a display name and bot token;
@@ -68,20 +70,19 @@ code blocks, quotes, and expandable quotes. For TikTok and Instagram posts, the
 author and description can also be disabled separately.
 
 Tokens and cookies uploaded through the web interface are stored inside the
-`data` directory, which is excluded from Git.
+`data` directory, grouped by user, and excluded from Git.
 
 `config.yaml` is excluded from Git. Do not share it because it contains the
 Telegram bot token.
 
 ## Web Interface
 
-To enable authentication, configure:
-
-```yaml
-web:
-  username: admin
-  password: long_password
-```
+The web interface uses built-in username/password accounts. The initial
+administrator is `boyd`; set the password on the first visit. Admin users can
+open the admin panel, view users with pagination, disable users, edit each
+user's settings, and disable access to TikTok, Instagram, or YouTube. If a
+service is disabled for a user, its upload/download UI is hidden and cookies for
+that service cannot be uploaded.
 
 By default, Docker exposes the interface only on `127.0.0.1:6767`.
 
